@@ -87,3 +87,132 @@ class CodeRanker:
         # Sort by final score descending
         results.sort(key=lambda x: x['score'], reverse=True)
         return results[:top_k]
+
+
+    def rank_for_feature(self, issue_embedding: np.ndarray, file_embeddings: Dict[str, np.ndarray], top_k: int = 10) -> List[Dict]:
+        """Feature Request Strategy:
+        Find files that are semantically similar to the requested feature
+        AND have high structural centrality (likely extension points).
+        """
+        results = []
+        paths = list(file_embeddings.keys())
+        embeddings = np.array([file_embeddings[p] for p in paths])
+        
+        if len(embeddings) == 0:
+            return []
+        
+        # Semantic similarity
+        dot_products = np.dot(embeddings, issue_embedding)
+        norms_files = np.linalg.norm(embeddings, axis=1)
+        norm_issue = np.linalg.norm(issue_embedding)
+        norms_files[norms_files == 0] = 1e-10
+        semantic_scores = dot_products / (norms_files * norm_issue)
+        
+        # Normalize
+        sem_max = np.max(semantic_scores)
+        sem_min = np.min(semantic_scores)
+        sem_rng = sem_max - sem_min if sem_max > sem_min else 1.0
+        semantic_scores = (semantic_scores - sem_min) / sem_rng
+        
+        # For features, prioritize structural centrality MORE than bugs
+        # Features often need to be added to core, well-connected modules
+        alpha = 0.5  # Lower alpha = more weight on structure
+        
+        for i, path in enumerate(paths):
+            pr_score = self._file_pr_scores.get(path, 0.0)
+            sem_score = semantic_scores[i]
+            final_score = (alpha * sem_score) + ((1 - alpha) * pr_score)
+            
+            results.append({
+                'file': path,
+                'score': final_score,
+                'semantic': sem_score,
+                'structural': pr_score
+            })
+        
+        results.sort(key=lambda x: x['score'], reverse=True)
+        return results[:top_k]
+
+    def rank_for_docs(self, issue_embedding: np.ndarray, file_embeddings: Dict[str, np.ndarray], top_k: int = 10) -> List[Dict]:
+        """
+        Documentation Strategy:
+        Prioritize semantic similarity to find code that matches the doc request.
+        Documentation issues are usually about explaining existing code.
+        """
+        results = []
+        paths = list(file_embeddings.keys())
+        embeddings = np.array([file_embeddings[p] for p in paths])
+        
+        if len(embeddings) == 0:
+            return []
+        
+        dot_products = np.dot(embeddings, issue_embedding)
+        norms_files = np.linalg.norm(embeddings, axis=1)
+        norm_issue = np.linalg.norm(issue_embedding)
+        norms_files[norms_files == 0] = 1e-10
+        semantic_scores = dot_products / (norms_files * norm_issue)
+        
+        sem_max = np.max(semantic_scores)
+        sem_min = np.min(semantic_scores)
+        sem_rng = sem_max - sem_min if sem_max > sem_min else 1.0
+        semantic_scores = (semantic_scores - sem_min) / sem_rng
+        
+        # For docs, prioritize semantic similarity HEAVILY
+        alpha = 0.9
+        
+        for i, path in enumerate(paths):
+            pr_score = self._file_pr_scores.get(path, 0.0)
+            sem_score = semantic_scores[i]
+            final_score = (alpha * sem_score) + ((1 - alpha) * pr_score)
+            
+            results.append({
+                'file': path,
+                'score': final_score,
+                'semantic': sem_score,
+                'structural': pr_score
+            })
+        
+        results.sort(key=lambda x: x['score'], reverse=True)
+        return results[:top_k]
+
+    def rank_for_performance(self, issue_embedding: np.ndarray, file_embeddings: Dict[str, np.ndarray], top_k: int = 10) -> List[Dict]:
+        """
+        Performance Strategy:
+        Find files with HIGH structural centrality (bottlenecks, hot paths)
+        AND semantic relevance to the performance issue.
+        """
+        results = []
+        paths = list(file_embeddings.keys())
+        embeddings = np.array([file_embeddings[p] for p in paths])
+        
+        if len(embeddings) == 0:
+            return []
+        
+        dot_products = np.dot(embeddings, issue_embedding)
+        norms_files = np.linalg.norm(embeddings, axis=1)
+        norm_issue = np.linalg.norm(issue_embedding)
+        norms_files[norms_files == 0] = 1e-10
+        semantic_scores = dot_products / (norms_files * norm_issue)
+        
+        sem_max = np.max(semantic_scores)
+        sem_min = np.min(semantic_scores)
+        sem_rng = sem_max - sem_min if sem_max > sem_min else 1.0
+        semantic_scores = (semantic_scores - sem_min) / sem_rng
+        
+        # For performance, prioritize structural centrality (hot paths)
+        alpha = 0.4
+        
+        for i, path in enumerate(paths):
+            pr_score = self._file_pr_scores.get(path, 0.0)
+            sem_score = semantic_scores[i]
+            final_score = (alpha * sem_score) + ((1 - alpha) * pr_score)
+            
+            results.append({
+                'file': path,
+                'score': final_score,
+                'semantic': sem_score,
+                'structural': pr_score
+            })
+        
+        results.sort(key=lambda x: x['score'], reverse=True)
+        return results[:top_k]

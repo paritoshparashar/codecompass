@@ -45,7 +45,11 @@ if analyze_btn:
                 data = response.json()
                 
                 st.success("Analysis Complete!")
-                
+
+                # Show the classification
+                category = data.get('issue_category', 'unknown')
+                st.info(f"**Issue Type Detected:** {category.capitalize()}")
+                                
                 st.header("Top 10 Relevant Files")
                 for i, res in enumerate(data['ranked_files']):
                     # Clean up the path for display
