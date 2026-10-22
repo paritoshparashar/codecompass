@@ -3,7 +3,7 @@ __all__ = ["Repository"]
 
 from collections.abc import Sequence
 from pathlib import Path
-from domain.document import Document
+from code_compass.domain.repository.document import Document
 
 class ReadOnlySequence(Sequence):
     def __init__(self, data):

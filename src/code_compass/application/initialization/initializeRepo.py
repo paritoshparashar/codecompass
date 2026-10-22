@@ -1,9 +1,9 @@
 from pathlib import Path
 from application.initialization.repoReader import RepoReader
-from domain.repository import Repository
-from domain.document import Document
+from code_compass.domain.repository.repository import Repository
+from code_compass.domain.repository.document import Document
 import subprocess
-from beautify import Beautify
+from code_compass.logger import Logger
 
 __all__ = ["RepositoryInitializationService"]
 
@@ -11,12 +11,12 @@ class RepositoryInitializationService :
     def __init__(self, root_folder: Path) -> None:
         self._root_folder = root_folder
 
-    def initialize_repository(self, git_url: str, branch: str) -> Repository | None:
-        Beautify.log_start("Repository Inititalization Service Started")
+    def initialize_repository(self, git_url: str, branch: str) -> Repository:
+        Logger.log_start("Repository Inititalization Service Started")
         # Logic to initialize the repository
         if (not self.validate_github_url(git_url)):
-            Beautify.log_end(f"Invalid GitHub URL: {git_url}")
-            return None
+            Logger.log_end(f"Invalid GitHub URL: {git_url}")
+            raise ValueError("Invalid GitHub URL")
 
         # create unique id to store the repository in the system
         repository_id = hash(git_url + branch) % (10 ** 8)
@@ -26,8 +26,7 @@ class RepositoryInitializationService :
 
         # clone the repository using git
         if not self.clone_repository(git_url, branch, destination):
-            Beautify.log_end(f"Failed to clone repository from URL: {git_url}")
-            return None
+            raise RuntimeError("Failed to clone the repository")
 
         repository = Repository(
                     repo_id = repository_id,
@@ -39,7 +38,7 @@ class RepositoryInitializationService :
         # Initialize the repo for the system
         self._initialize_repository(repository)
         # create the repository object and return it
-        Beautify.log_end(f"Repository Initialization Response: {repository.message}")
+        Logger.log_end(f"Repository Initialization Response: {repository.message}")
         return repository
 
     def _initialize_repository(self, repository: Repository) -> None :
@@ -83,7 +82,7 @@ class RepositoryInitializationService :
 
     def clone_repository(self, git_url: str, branch: str, destination: Path) -> bool:
         # print new line 
-        Beautify.print_start_separator()
+        Logger.print_start_separator()
         print ("Cloning repository","\nfrom URL:", git_url, "\nto destination:", destination)
         # Logic to clone the repository using git
         try:
@@ -101,8 +100,8 @@ class RepositoryInitializationService :
                 text=True,
             )
             print("Repository cloned successfully")
-            Beautify.print_end_separator()
+            Logger.print_end_separator()
             return True
         except subprocess.CalledProcessError as e:
-            print(f"Error cloning repository: {e.stderr}")
+            Logger.log_end(f"Error occurred while cloning repository: {e.stderr}")
             return False

@@ -4,7 +4,6 @@ import argparse
 from pathlib import Path
 import pipeline
 from pipeline.io_module import InitializeRepositoryRequest, InitializeRepositoryResponse
-from beautify import Beautify
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(

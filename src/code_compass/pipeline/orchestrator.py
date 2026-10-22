@@ -2,9 +2,10 @@ __all__ = ["CodeCompassPipeline"]
 
 from pathlib import Path
 from application.initialization import RepositoryInitializationService
-from beautify import Beautify
-from domain.repository import Repository
+from code_compass.logger import Logger
+from code_compass.domain.repository.repository import Repository
 from domain.systemStates import SystemState
+from domain.repository.repository_manager import RepositoryManager
 from pipeline.io_module import InitializeRepositoryRequest, InitializeRepositoryResponse
 
 class CodeCompassPipeline:
@@ -30,6 +31,7 @@ class CodeCompassPipeline:
                         #  store: "RunStore")
         self.initialization_service = RepositoryInitializationService(Path(__file__).parents[3] / "clonedRepository")
         self.state = SystemState.NOT_INITIALIZED
+        self.repositoryManager = RepositoryManager()
         self.classifier = None
         self.ranker = None
         self.evaluator = None
@@ -39,27 +41,30 @@ class CodeCompassPipeline:
 
     # def process(self, issue: Issue, config: Settings) -> RunReport:
     def startPipeline(self, initializeInput: InitializeRepositoryRequest) -> InitializeRepositoryResponse:
-        Beautify.log_start("Code Compass Started")
-        # Call create repository
+        Logger.log_start("Code Compass Started")
+        # Call create and initialize repository
         try:
-            repository: Repository = self.create_repository(initializeInput.git_url, initializeInput.branch)
+            repository: Repository = self.create_and_initialize_repository(initializeInput.git_url, initializeInput.branch)
+            self.repositoryManager.add_repository(repository)
         except Exception as e:
             return InitializeRepositoryResponse(
                 status="failure",
                 message = str(e),
                 repository_id = None
             )
-        self.state = SystemState.READY
+        self.state = SystemState.INITIALIZED
         return InitializeRepositoryResponse(
                     status="success",
                     message="Repository initialized successfully.",
                     repository_id=str(repository.repo_id)
                 )
 
-    def create_repository(self, git_url: str, branch: str) -> Repository:
-        repository = self.initialization_service.initialize_repository(git_url, branch)
-        if repository is None:
-            raise Exception("Repository initialization failed.")
+    def create_and_initialize_repository(self, git_url: str, branch: str) -> Repository:
+        try :
+            repository = self.initialization_service.initialize_repository(git_url, branch)
+        except Exception as e:
+            Logger.log_end(f"Repository initialization failed: {e}")
+            raise e
         # set the system state to READY after successful initialization / or how to do it think - per repo or per
         # for now, we can set it globally for the system
         # system_state = "READY"
@@ -67,5 +72,5 @@ class CodeCompassPipeline:
         return repository
 
     def end(self):
-        Beautify.log_end("Code Compass Ended")
+        Logger.log_end("Code Compass Ended")
 
