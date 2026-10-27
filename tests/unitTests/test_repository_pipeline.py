@@ -13,7 +13,7 @@ from code_compass.application.initialization_package.repository_reader import Re
 from code_compass.application.initialization_package.repostiory_initialization_service import (
     RepositoryInitializationService,
 )
-from src.code_compass.domain.repository_package import *
+from code_compass.domain.repository_package import *
 
 
 class TestDomainRepositoryAndDocument(unittest.TestCase):
@@ -42,11 +42,11 @@ class TestDomainRepositoryAndDocument(unittest.TestCase):
     def test_repository_read_only_documents_and_immutability(self):
         repo_path = Path("/tmp/fake_repo")
         repo = Repository(
-            repo_id=101, name="fake_repo", url="https://github.com/a/b", path=repo_path
+            id=101, name="fake_repo", url="https://github.com/a/b", path=repo_path
         )
 
         # Invariant checks: identity properties
-        self.assertEqual(repo.repo_id, 101)
+        self.assertEqual(repo.id, 101)
         self.assertEqual(repo.name, "fake_repo")
         self.assertEqual(repo.url, "https://github.com/a/b")
         self.assertEqual(repo.path, repo_path)
@@ -69,7 +69,7 @@ class TestDomainRepositoryAndDocument(unittest.TestCase):
     def test_repository_manager_storage_and_retrieval(self):
         manager = RepositoryManager()
         repo = Repository(
-            repo_id=202,
+            id=202,
             name="test_repo",
             url="https://github.com/x/y",
             path=Path("/tmp/x"),
@@ -80,7 +80,7 @@ class TestDomainRepositoryAndDocument(unittest.TestCase):
         manager.add_repository(repo)
         retrieved = manager.get_repository(202)
         self.assertIsNotNone(retrieved)
-        self.assertEqual(retrieved.repo_id, 202)
+        self.assertEqual(retrieved.id, 202)
         self.assertEqual(retrieved.name, "test_repo")
 
 
@@ -119,12 +119,12 @@ class TestRepositoryInitializationService(unittest.TestCase):
 
     def test_validate_github_url(self):
         service = RepositoryInitializationService(root_folder=Path("/tmp"))
-        self.assertTrue(service.validate_github_url("https://github.com/user/repo"))
-        self.assertTrue(service.validate_github_url("http://github.com/user/repo"))
-        self.assertFalse(service.validate_github_url("https://gitlab.com/user/repo"))
-        self.assertFalse(service.validate_github_url("not_a_url"))
+        self.assertTrue(service._validate_github_url("https://github.com/user/repo"))
+        self.assertTrue(service._validate_github_url("http://github.com/user/repo"))
+        self.assertFalse(service._validate_github_url("https://gitlab.com/user/repo"))
+        self.assertFalse(service._validate_github_url("not_a_url"))
 
-    @patch.object(RepositoryInitializationService, "clone_repository")
+    @patch.object(RepositoryInitializationService, "_clone_repository")
     def test_initialize_repository_flow(self, mock_clone):
         # Mock git clone so we don't hit the internet
         def fake_clone(git_url, branch, destination):

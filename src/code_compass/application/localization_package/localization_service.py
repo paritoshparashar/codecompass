@@ -41,7 +41,9 @@ class LocalizationService:
         issue.set_tokens(self.tokenizer.tokenize(issue.description))
 
         # Use the strategy to localize the issue
-        return self.strategy.localize(candidates=candidates, issue=issue, top_k=self.top_k)
+        candidates = self.strategy.localize(candidates=candidates, issue=issue, top_k=self.top_k)
+        self.log_localization_results(candidates)
+        return candidates
 
     def get_candidates(
         self, repository: Repository, loc_level: LocalizationLevel
@@ -148,3 +150,24 @@ class LocalizationService:
                 next_candidate_id += 1
 
         return candidates
+
+    def log_localization_results(self, candidates: list[Candidate]):
+        """
+        Logs the results of the localization process.
+
+        Args:
+            candidates (list[Candidate]): The list of localized candidates.
+        """
+        if not candidates:
+            print("No candidates were localized.")
+            return
+
+        print(f"Localization completed successfully with {len(candidates)} candidates.")
+        for candidate in candidates:
+            if isinstance(candidate, FileCandidate):
+                print(f"File Candidate: {candidate.filePath}")
+            elif isinstance(candidate, FunctionCandidate):
+                print(
+                    f"Function Candidate: {candidate.function_name} in {candidate.filePath} "
+                    f"(Lines {candidate.start_line}-{candidate.end_line})"
+                )

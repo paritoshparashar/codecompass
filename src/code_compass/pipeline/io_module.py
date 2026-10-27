@@ -21,27 +21,22 @@ class ResponseStatus(Enum):
 
 # I/O Objects for the Repository Initialization Endpoint
 class InitializeRepositoryRequest(BaseModel):
-    def __init__(self, git_url: str = "exampleURL.com", branch: str = "main"):
-        self.git_url = git_url
-        self.branch = branch
-
+    git_url: str = "exampleURL.com"
+    branch: str = "main"
 
 class InitializeRepositoryResponse(BaseModel):
-    def __init__(self, status: ResponseStatus, repository_id: str | None):
-        self.status = status
-        self.repository_id = repository_id
+    status: ResponseStatus
+    repository_id: str | None
 
 
 # I/O Objects for the Issue Localization Endpoint
 class IssueLocalizationRequest(BaseModel):
-    def __init__(self, repository_id: str, issue: str):
-        self.repository_id = repository_id
-        self.issue = issue
-
+    repository_id: int
+    issue: str
 
 class IssueLocalizationResponse(BaseModel):
-    def __init__(
-        self, status: ResponseStatus, localized_candidates: list[Candidate] | None
-    ):
-        self.status = status
-        self.localized_candidates = localized_candidates
+    status: ResponseStatus
+    localized_candidates: list[Candidate] | None
+
+    class Config:
+        arbitrary_types_allowed = True  # Required in Pydantic v1 for Candidate objects

@@ -1,6 +1,7 @@
 # The application will run from here
 
 import argparse
+from pathlib import Path
 
 from .logger import Logger
 from .pipeline import (
@@ -38,7 +39,6 @@ def main() -> None:
     )
     if issue_localization_response.status != ResponseStatus.SUCCESS:
         exit_app(orchestrator)
-    print (f"Localized Candidates: {issue_localization_response.localized_candidates}")
 
     # Other operations later
     exit_app(orchestrator)
@@ -52,14 +52,27 @@ def repostiroy_initialization(
         input("Please enter the branch to analyze (default is 'main'): ") or "main"
     )
     request = InitializeRepositoryRequest(git_url=github_url, branch=branch_to_analyze)
-    response: InitializeRepositoryResponse = orchestrator.startPipeline(request)
+    response: InitializeRepositoryResponse = (
+        orchestrator.create_and_initialize_repository(request)
+    )
     return response
 
 
 def issue_localization(
     orchestrator: CodeCompassPipeline, response: InitializeRepositoryResponse
 ) -> IssueLocalizationResponse:
-    issue:str = input("Please enter the issue to localize: ")
+    # Create a file to store the issue description at the specified Path
+    repo_issue_folder = Path("issuesDirectory") / f"issues_for_repo_{response.repository_id}"
+    repo_issue_folder.mkdir(parents=True, exist_ok=True)
+    issueFilePath = repo_issue_folder / "issue_description.txt"
+    issueFilePath.touch(exist_ok=True)
+    Logger.log(
+        "\nAn 'issue_description.txt' file has been created. \nPlease enter the issue description in the file, save it, and close the file when done.\n"
+    )
+    # ask the user y/n if they want to continue after entering the issue description
+    input("Press Enter to continue after entering the issue description in the file...")
+    issue: str = issueFilePath.read_text()
+
     issue_localization_request = IssueLocalizationRequest(
         repository_id=response.repository_id, issue=issue
     )
