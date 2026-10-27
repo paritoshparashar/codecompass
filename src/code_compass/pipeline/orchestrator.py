@@ -1,13 +1,6 @@
 __all__ = ["CodeCompassPipeline"]
 
-from pathlib import Path
-
-from code_compass.algorithms.localization.BM25.bm25_localization_strategy import (
-    BM25LocalizationStrategy,
-)
-
-from ..application.initialization_package import RepositoryInitializationService
-from ..application.localization_package import LocalizationService
+from ..domain.issue import Issue
 from ..domain.repository_package.repository import Repository
 from ..domain.repository_package.repository_manager import RepositoryManager
 from ..domain.systemStates import SystemState
@@ -19,6 +12,7 @@ from ..pipeline.io_module import (
     IssueLocalizationResponse,
     ResponseStatus,
 )
+from .service_creater import ServiceCreater
 
 
 class RepositoryNotFoundError(Exception):
@@ -44,20 +38,20 @@ class CodeCompassPipeline:
         #  guide: GuideGenerator,
         #  feedback: FeedbackController,
         #  store: "RunStore")
-        self.initialization_service = RepositoryInitializationService(
-            Path(__file__).parents[3] / "clonedRepository"
-        )
-        self.localization_service = LocalizationService(
-            strategy=BM25LocalizationStrategy()
-        )
+        self.start_services(ServiceCreater())
         self.state = SystemState.NOT_INITIALIZED
         self.repositoryManager = RepositoryManager()
+        self.issue: Issue | None = None
         self.classifier = None
         self.ranker = None
         self.evaluator = None
         self.guide = None
         self.feedback = None
         self.store = None
+
+    def start_services(self, creator: ServiceCreater):
+        self.initialization_service = creator.create_initialization_service()
+        self.localization_service = creator.create_localization_service()
 
     # def process(self, issue: Issue, config: Settings) -> RunReport:
     def create_and_initialize_repository(
@@ -81,7 +75,7 @@ class CodeCompassPipeline:
         self.state = SystemState.INITIALIZED
         return InitializeRepositoryResponse(
             status=ResponseStatus.SUCCESS,
-            repository_id=str(repository.repo_id),
+            repository_id=str(repository.id),
         )
 
     def localize_issue(
@@ -96,10 +90,14 @@ class CodeCompassPipeline:
                 status=ResponseStatus.FAILURE,
                 localized_candidates=None,
             )
+        self.issue = Issue(
+            issue_id=0,
+            description=localization_request.issue,
+        )
 
         # Call the localization service
         localized_candidates = self.localization_service.localize_issue(
-            issue=localization_request.issue,
+            issue=self.issue,
             repository=self.repositoryManager.get_repository(
                 localization_request.repository_id
             ),
@@ -111,8 +109,7 @@ class CodeCompassPipeline:
             )
 
         return IssueLocalizationResponse(
-            status=ResponseStatus.SUCCESS,
-            localized_candidates=localized_candidates,
+            status=ResponseStatus.SUCCESS, localized_candidates=localized_candidates
         )
 
     def end(self):

@@ -1,12 +1,22 @@
 from dataclasses import dataclass
+from enum import Enum, auto
 
-from .localization_level import LocalizationLevel
+
+class LocalizationLevel(Enum):
+    FILE = auto()
+    FUNCTION = auto()
+    LINE = auto()
+
+class LocalizationStrategyType(Enum):
+    BM25 = auto()
+    TFIDF = auto()
+    WORDEMBEDD = auto()
 
 
 @dataclass(frozen=True, slots=True)
 class LocalizationConfig:
     level: LocalizationLevel = LocalizationLevel.FILE
-    strategy: str = "bm25"
+    strategy: LocalizationStrategyType = LocalizationStrategyType.BM25
     top_k: int = 10
 
     # BM25 parameters
@@ -17,7 +27,7 @@ class LocalizationConfig:
         if self.top_k < 0:
             raise ValueError("top_k must be non-negative")
 
-        if self.strategy not in {"bm25"}:
+        if self.strategy not in {LocalizationStrategyType.BM25, LocalizationStrategyType.TFIDF, LocalizationStrategyType.WORDEMBEDD}:
             raise ValueError(f"Unsupported strategy: {self.strategy}")
 
         if self.bm25_k1 < 0:

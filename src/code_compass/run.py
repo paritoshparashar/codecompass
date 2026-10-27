@@ -38,6 +38,7 @@ def main() -> None:
     )
     if issue_localization_response.status != ResponseStatus.SUCCESS:
         exit_app(orchestrator)
+    print (f"Localized Candidates: {issue_localization_response.localized_candidates}")
 
     # Other operations later
     exit_app(orchestrator)
@@ -58,7 +59,7 @@ def repostiroy_initialization(
 def issue_localization(
     orchestrator: CodeCompassPipeline, response: InitializeRepositoryResponse
 ) -> IssueLocalizationResponse:
-    issue = input("Please enter the issue to localize: ")
+    issue:str = input("Please enter the issue to localize: ")
     issue_localization_request = IssueLocalizationRequest(
         repository_id=response.repository_id, issue=issue
     )

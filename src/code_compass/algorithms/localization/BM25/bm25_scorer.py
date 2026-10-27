@@ -1,10 +1,8 @@
-
 from collections import Counter
 from math import log
 
 from ....domain.candidate_package import Candidate
 from ....domain.issue import Issue
-from ....domain.token_package.token import Token
 
 
 class BM25Scorer:
@@ -19,43 +17,40 @@ class BM25Scorer:
 
     def score(
         self,
-        documents: list[Candidate],
+        candidates: list[Candidate],
         issue: Issue,
     ) -> list[float]:
-        """Return one BM25 score for each document."""
-        if not documents:
+        """Return one BM25 score for each candidate."""
+        if not candidates:
             return []
 
         query_tokens = {
-            token for token in issue.issueTokens if token
+            token.normalized for token in issue.get_tokens() if token.normalized
         }
 
         term_frequencies = [
-            Counter(token for token in doc.tokens if token)
-            for doc in documents
+            Counter(token.normalized for token in candidate.tokens if token.normalized)
+            for candidate in candidates
         ]
 
         document_lengths = [
-            sum(frequencies.values())
-            for frequencies in term_frequencies
+            sum(frequencies.values()) for frequencies in term_frequencies
         ]
 
-        average_document_length = (
-            sum(document_lengths) / len(documents)
-        )
+        average_document_length = sum(document_lengths) / len(candidates)
 
-        document_frequency = Counter()
+        document_frequency: Counter[str] = Counter()
+
         for frequencies in term_frequencies:
+            # Each normalized term contributes at most once per candidate.
             document_frequency.update(frequencies.keys())
 
-        # Corpus-level calculation: performed once.
         idf_scores = self._calculate_idf(
             query_tokens,
             document_frequency,
-            len(documents),
+            len(candidates),
         )
 
-        # Document-level calculation: performed once per document.
         return [
             self._score_document(
                 query_tokens,
@@ -72,11 +67,11 @@ class BM25Scorer:
 
     def _calculate_idf(
         self,
-        query_tokens: set[Token],
-        document_frequency: Counter[Token],
+        query_tokens: set[str],
+        document_frequency: Counter[str],
         total_documents: int,
-    ) -> dict[Token, float]:
-        """Calculate IDF for every query token across the corpus."""
+    ) -> dict[str, float]:
+        """Calculate IDF for each query term across the corpus."""
         return {
             token: log(
                 1.0
@@ -92,29 +87,27 @@ class BM25Scorer:
         document_length: int,
         average_document_length: float,
     ) -> float:
-        """Calculate BM25's normalized term-frequency contribution."""
+        """Calculate BM25's length-normalized term-frequency contribution."""
         if frequency == 0 or average_document_length == 0:
             return 0.0
 
         length_normalization = (
-            1.0 - self.b
-            + self.b * document_length / average_document_length
+            1.0 - self.b + self.b * document_length / average_document_length
         )
 
         return (
-            frequency * (self.k1 + 1.0)
-            / (frequency + self.k1 * length_normalization)
+            frequency * (self.k1 + 1.0) / (frequency + self.k1 * length_normalization)
         )
 
     def _score_document(
         self,
-        query_tokens: set[Token],
-        term_frequencies: Counter[Token],
+        query_tokens: set[str],
+        term_frequencies: Counter[str],
         document_length: int,
         average_document_length: float,
-        idf_scores: dict[Token, float],
+        idf_scores: dict[str, float],
     ) -> float:
-        """Combine each query token's TF and IDF into one document score."""
+        """Combine the TF and IDF contributions for one candidate."""
         score = 0.0
 
         for token in query_tokens:

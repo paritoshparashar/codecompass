@@ -9,7 +9,7 @@ class LocalizationStrategy(Protocol):
     A protocol for defining localization strategies.
     """
 
-    def localize(self, candidates: list[Candidate], issue: Issue, top_k: int = 10) -> list[Candidate]:
+    def localize(self, candidates: list[Candidate], issue: Issue, top_k: int) -> list[Candidate]:
         """
         Localizes the given issue within the provided candidates.
         Modifies the candidates in place based on the issue.

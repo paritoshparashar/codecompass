@@ -1,11 +1,17 @@
 # Classes defining the request and response models for the repository initialization endpoint
-__all__ = ["InitializeRepositoryRequest", "InitializeRepositoryResponse", "IssueLocalizationRequest", "IssueLocalizationResponse", "ResponseStatus"]
+__all__ = [
+    "InitializeRepositoryRequest",
+    "InitializeRepositoryResponse",
+    "IssueLocalizationRequest",
+    "IssueLocalizationResponse",
+    "ResponseStatus",
+]
 
 from enum import Enum, auto
 
 from pydantic.v1 import BaseModel
 
-from ..domain.repository_package.document import Document
+from ..domain.candidate_package.candidate_interface import Candidate
 
 
 class ResponseStatus(Enum):
@@ -34,6 +40,8 @@ class IssueLocalizationRequest(BaseModel):
 
 
 class IssueLocalizationResponse(BaseModel):
-    def __init__(self, status: ResponseStatus, localized_candidates: list[Document] | None):
+    def __init__(
+        self, status: ResponseStatus, localized_candidates: list[Candidate] | None
+    ):
         self.status = status
         self.localized_candidates = localized_candidates

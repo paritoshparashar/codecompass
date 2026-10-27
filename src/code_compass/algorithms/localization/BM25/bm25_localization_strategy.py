@@ -10,14 +10,14 @@ from .bm25_scorer import BM25Scorer
 
 
 class BM25LocalizationStrategy(LocalizationStrategy):
-    def __init__(self):
-        self.bm25_scorer = BM25Scorer()
+    def __init__(self, scorer: BM25Scorer):
+        self.bm25_scorer = scorer
 
     def localize(
         self,
         candidates: list[Candidate],
         issue: Issue,
-        top_k: int = 10,
+        top_k: int
     ) -> list[Candidate]:
         if top_k < 0:
             raise ValueError("top_k must be non-negative")

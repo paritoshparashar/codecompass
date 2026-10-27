@@ -10,4 +10,4 @@ class RepositoryManager:
         return self.repositories.get(repo_id)
 
     def add_repository(self, repository: Repository) -> None:
-        self.repositories[repository.repo_id] = repository
+        self.repositories[repository.id] = repository

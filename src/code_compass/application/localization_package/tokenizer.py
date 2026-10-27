@@ -17,33 +17,39 @@ class Tokenizer:
         UNKNOWN = r"^.*$"  # Fallback for any other format
 
     def tokenize(self, text: str) -> list[Token]:
-        self.result = set()
+        result: list[Token] = []
         # Tokenize the input text into tokens, handling camelCase, pascalCase, and snake_case
         # First split by whitespace and underscores, then handle camelCase and pascalCase
-        tokens = re.findall(r"\S+", text)
+        tokens = re.findall(r"[A-Za-z_][A-Za-z0-9_]*|[0-9]+", text)
         # identify the tokens that are camelCase or pascalCase and split them further
+
         for token in tokens:
             current: list[Token] = []
+
             match self.token_type(token):
                 case Tokenizer.StringType.SNAKE_CASE:
                     current = [
-                        self.create_token(t) for t in self.snake_case_split(token)
+                        self.create_token(t)
+                        for t in self.snake_case_split(token)
                     ]
                 case Tokenizer.StringType.CAMEL_CASE:
                     current = [
-                        self.create_token(t) for t in self.camel_case_split(token)
+                        self.create_token(t)
+                        for t in self.camel_case_split(token)
                     ]
                 case Tokenizer.StringType.PASCAL_CASE:
                     current = [
-                        self.create_token(t) for t in self.pascal_case_split(token)
+                        self.create_token(t)
+                        for t in self.pascal_case_split(token)
                     ]
                 case _:
-                    pass  # Do nothing for unknown types
+                    pass
 
-            self.result.update(current)
-            # add the original token as well
-            self.result.update([self.create_token(token)])
-        return list(self.result)
+            result.extend(current)
+            # Preserve the original token as well.
+            result.append(self.create_token(token))
+
+        return result
 
     @staticmethod
     def token_type(token: str) -> "Tokenizer.StringType | None":

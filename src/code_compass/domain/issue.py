@@ -25,9 +25,17 @@ class Issue:
         self.issue_id = issue_id
         self.title = title
         self.description = description
-        self.issueTokens: list[Token] = []  # List of tokens extracted from the issue
+        self._tokens: list[Token] = []  # List of tokens extracted from the issue
         self.label: IssueType = None  # Label can be set later
         self.status: IssueStatus = None  # Status can be set later
 
     def __repr__(self):
         return f"Issue(issue_id={self.issue_id}, title={self.title})"
+
+    def set_tokens(self, tokens: list[Token]):
+        """Set the tokens for the issue."""
+        self._tokens = tokens
+
+    def get_tokens(self) -> list[Token]:
+        """Get the tokens for the issue."""
+        return self._tokens
