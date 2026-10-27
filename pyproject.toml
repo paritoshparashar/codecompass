@@ -1,0 +1,22 @@
+[build-system]
+requires = ["setuptools>=61.0"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "codecompass"
+version = "0.1.0"
+description = "Bridging the vocabulary gap between issue descriptions and code mechanisms"
+requires-python = ">=3.11"
+dependencies = [
+    "fastapi>=0.110.0",
+    "uvicorn[standard]>=0.28.0",
+    "pydantic>=2.0.0",
+]
+
+# Expose a terminal command
+[project.scripts]
+codecompass = "code_compass.run:main"
+
+# Tell setuptools where your source code packages are located
+[tool.setuptools.packages.find]
+where = ["src"]

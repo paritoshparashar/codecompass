@@ -3,8 +3,8 @@ from fastapi import FastAPI, HTTPException, status
 from pydantic import BaseModel, HttpUrl
 from pipeline.io_module import InitializeRepositoryRequest, InitializeRepositoryResponse
 import pipeline
-from code_compass.domain.repository.repository import Repository
-from application.initialization.initializeRepo import (
+from code_compass.domain.repository_package.repository import Repository
+from application.initialization_package.initializeRepo import (
     RepositoryInitializationService
 )
 app = FastAPI()

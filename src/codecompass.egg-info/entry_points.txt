@@ -1,0 +1,2 @@
+[console_scripts]
+codecompass = code_compass.run:main

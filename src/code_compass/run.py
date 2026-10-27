@@ -1,9 +1,17 @@
 # The application will run from here
 
 import argparse
-from pathlib import Path
-import pipeline
-from pipeline.io_module import InitializeRepositoryRequest, InitializeRepositoryResponse
+
+from .logger import Logger
+from .pipeline import (
+    CodeCompassPipeline,
+    InitializeRepositoryRequest,
+    InitializeRepositoryResponse,
+    IssueLocalizationRequest,
+    IssueLocalizationResponse,
+    ResponseStatus,
+)
+
 
 def build_parser() -> argparse.ArgumentParser:
     parser = argparse.ArgumentParser(
@@ -15,19 +23,55 @@ def build_parser() -> argparse.ArgumentParser:
 
 
 def main() -> None:
-    parser = build_parser()
-    args = parser.parse_args()
-
-    # Replace this with your actual application logic.
     # Call the orchestrator function
-    github_url : str = input("Please enter the URL of the repository to analyze: ")
-    branch_to_analyze = input("Please enter the branch to analyze (default is 'main'): ") or "main"
-    initialize_request = InitializeRepositoryRequest(git_url=github_url, branch=branch_to_analyze)
+    Logger.log_start("Welcome to Code Compass!")
+    orchestrator = CodeCompassPipeline()
 
-    orchestrator = pipeline.CodeCompassPipeline()
-    response : InitializeRepositoryResponse = orchestrator.startPipeline(initialize_request)
+    # Repository Initialization
+    repository_initialization_response = repostiroy_initialization(orchestrator)
+    if repository_initialization_response.status != ResponseStatus.SUCCESS:
+        exit_app(orchestrator)
+
+    # Issue Localization
+    issue_localization_response = issue_localization(
+        orchestrator, repository_initialization_response
+    )
+    if issue_localization_response.status != ResponseStatus.SUCCESS:
+        exit_app(orchestrator)
+
+    # Other operations later
+    exit_app(orchestrator)
+
+
+def repostiroy_initialization(
+    orchestrator: CodeCompassPipeline,
+) -> InitializeRepositoryResponse:
+    github_url: str = input("Please enter the URL of the repository to analyze: ")
+    branch_to_analyze = (
+        input("Please enter the branch to analyze (default is 'main'): ") or "main"
+    )
+    request = InitializeRepositoryRequest(git_url=github_url, branch=branch_to_analyze)
+    response: InitializeRepositoryResponse = orchestrator.startPipeline(request)
+    return response
+
+
+def issue_localization(
+    orchestrator: CodeCompassPipeline, response: InitializeRepositoryResponse
+) -> IssueLocalizationResponse:
+    issue = input("Please enter the issue to localize: ")
+    issue_localization_request = IssueLocalizationRequest(
+        repository_id=response.repository_id, issue=issue
+    )
+    issue_localization_response: IssueLocalizationResponse = (
+        orchestrator.localize_issue(issue_localization_request)
+    )
+    return issue_localization_response
+
+
+def exit_app(orchestrator: CodeCompassPipeline) -> None:
     orchestrator.end()
-    return None
-    
+    Logger.log_end("CodeCompass Exited")
+
+
 if __name__ == "__main__":
     main()

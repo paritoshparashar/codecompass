@@ -1,21 +1,37 @@
 __all__ = ["CodeCompassPipeline"]
 
 from pathlib import Path
-from application.initialization import RepositoryInitializationService
-from code_compass.logger import Logger
-from code_compass.domain.repository.repository import Repository
-from domain.systemStates import SystemState
-from domain.repository.repository_manager import RepositoryManager
-from pipeline.io_module import InitializeRepositoryRequest, InitializeRepositoryResponse
+
+from code_compass.algorithms.localization.BM25.bm25_localization_strategy import (
+    BM25LocalizationStrategy,
+)
+
+from ..application.initialization_package import RepositoryInitializationService
+from ..application.localization_package import LocalizationService
+from ..domain.repository_package.repository import Repository
+from ..domain.repository_package.repository_manager import RepositoryManager
+from ..domain.systemStates import SystemState
+from ..logger import Logger
+from ..pipeline.io_module import (
+    InitializeRepositoryRequest,
+    InitializeRepositoryResponse,
+    IssueLocalizationRequest,
+    IssueLocalizationResponse,
+    ResponseStatus,
+)
+
+
+class RepositoryNotFoundError(Exception):
+    """Raised when a requested repository is not registered."""
+
 
 class CodeCompassPipeline:
-
-    # 0 - The application starts - 
-    #   0.1 - Populates the domain objects 
-    #          [Creates the repo - docs, and whatever we can do before receiving the issue - 
+    # 0 - The application starts -
+    #   0.1 - Populates the domain objects
+    #          [Creates the repo - docs, and whatever we can do before receiving the issue -
     #           create the settings and configs for the application to run ]
     # 1 - Receive the issue
-    # 2 - Populates the issue domain object 
+    # 2 - Populates the issue domain object
     # 2 - Calls the LocalizationService with the issue object [the repo can be accessed globally]
     #   2.1 - Select the strategy from the config file [BM25, BM25+Embeddings, Embeddings]
     # 3 - Receives the LocalizationResult
@@ -23,13 +39,17 @@ class CodeCompassPipeline:
     # 4 - Receives the ClassificationResult
 
     def __init__(self):
-             #  self, classifier: IssueClassifier,
-                        #  ranker: HybridRanker,
-                        #  evluator: EvidenceEvaluator,
-                        #  guide: GuideGenerator,
-                        #  feedback: FeedbackController,
-                        #  store: "RunStore")
-        self.initialization_service = RepositoryInitializationService(Path(__file__).parents[3] / "clonedRepository")
+        #  ranker: HybridRanker,
+        #  evluator: EvidenceEvaluator,
+        #  guide: GuideGenerator,
+        #  feedback: FeedbackController,
+        #  store: "RunStore")
+        self.initialization_service = RepositoryInitializationService(
+            Path(__file__).parents[3] / "clonedRepository"
+        )
+        self.localization_service = LocalizationService(
+            strategy=BM25LocalizationStrategy()
+        )
         self.state = SystemState.NOT_INITIALIZED
         self.repositoryManager = RepositoryManager()
         self.classifier = None
@@ -40,37 +60,60 @@ class CodeCompassPipeline:
         self.store = None
 
     # def process(self, issue: Issue, config: Settings) -> RunReport:
-    def startPipeline(self, initializeInput: InitializeRepositoryRequest) -> InitializeRepositoryResponse:
-        Logger.log_start("Code Compass Started")
+    def create_and_initialize_repository(
+        self, respoistoryRequest: InitializeRepositoryRequest
+    ) -> InitializeRepositoryResponse:
+
+        Logger.log_start("Pipeline: Started")
         # Call create and initialize repository
-        try:
-            repository: Repository = self.create_and_initialize_repository(initializeInput.git_url, initializeInput.branch)
-            self.repositoryManager.add_repository(repository)
-        except Exception as e:
-            return InitializeRepositoryResponse(
-                status="failure",
-                message = str(e),
-                repository_id = None
+
+        repository: Repository | None = (
+            self.initialization_service.initialize_repository(
+                respoistoryRequest.git_url, respoistoryRequest.branch
             )
+        )
+        if repository is None:
+            return InitializeRepositoryResponse(
+                status=ResponseStatus.FAILURE,
+                repository_id=None,
+            )
+        self.repositoryManager.add_repository(repository)
         self.state = SystemState.INITIALIZED
         return InitializeRepositoryResponse(
-                    status="success",
-                    message="Repository initialized successfully.",
-                    repository_id=str(repository.repo_id)
-                )
+            status=ResponseStatus.SUCCESS,
+            repository_id=str(repository.repo_id),
+        )
 
-    def create_and_initialize_repository(self, git_url: str, branch: str) -> Repository:
-        try :
-            repository = self.initialization_service.initialize_repository(git_url, branch)
-        except Exception as e:
-            Logger.log_end(f"Repository initialization failed: {e}")
-            raise e
-        # set the system state to READY after successful initialization / or how to do it think - per repo or per
-        # for now, we can set it globally for the system
-        # system_state = "READY"
+    def localize_issue(
+        self, localization_request: IssueLocalizationRequest
+    ) -> IssueLocalizationResponse:
 
-        return repository
+        if self.state != SystemState.INITIALIZED:
+            Logger.log(
+                f"Issue Localization attempted before repository initialization : {Logger.red('Exiting with error')}"
+            )
+            return IssueLocalizationResponse(
+                status=ResponseStatus.FAILURE,
+                localized_candidates=None,
+            )
+
+        # Call the localization service
+        localized_candidates = self.localization_service.localize_issue(
+            issue=localization_request.issue,
+            repository=self.repositoryManager.get_repository(
+                localization_request.repository_id
+            ),
+        )
+        if localized_candidates is None:
+            return IssueLocalizationResponse(
+                status=ResponseStatus.FAILURE,
+                localized_candidates=None,
+            )
+
+        return IssueLocalizationResponse(
+            status=ResponseStatus.SUCCESS,
+            localized_candidates=localized_candidates,
+        )
 
     def end(self):
-        Logger.log_end("Code Compass Ended")
-
+        Logger.log_end("Pipeline Ended")
