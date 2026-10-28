@@ -2,12 +2,14 @@ __all__ = ["LocalizationService"]
 
 
 import ast
+from pathlib import Path
 
 from ...domain.candidate_package.candidate_interface import Candidate
 from ...domain.candidate_package.file_candidate import FileCandidate
 from ...domain.candidate_package.function_candidate import FunctionCandidate
 from ...domain.issue import Issue
 from ...domain.repository_package.repository import Repository
+from ...logger import Logger
 from .localization_config import LocalizationLevel
 from .localization_strategy import (
     LocalizationStrategy,
@@ -16,13 +18,21 @@ from .tokenizer import Tokenizer
 
 
 class LocalizationService:
-    def __init__(self, strategy: LocalizationStrategy, loc_level: LocalizationLevel, top_k: int = 10):
+    def __init__(
+        self,
+        strategy: LocalizationStrategy,
+        loc_level: LocalizationLevel,
+        top_k: int = 10,
+    ):
         self.strategy: LocalizationStrategy = strategy
         self.loc_level: LocalizationLevel = loc_level
         self.top_k: int = top_k
         self.tokenizer: Tokenizer = Tokenizer()
+        self.serviceName: str = "Localization"
 
-    def localize_issue(self, issue: Issue, repository: Repository) -> list[Candidate]:
+    def localize_issue(
+        self, issue: Issue, repository: Repository
+    ) -> list[Candidate] | None:
         """
         Localizes the given issue within the provided repository using the specified strategy.
 
@@ -33,21 +43,36 @@ class LocalizationService:
         Returns:
             list[Candidate]: A list of localized candidates or results based on the strategy.
         """
+        Logger.log_service_start(f"{self.serviceName}")
         if self.strategy is None:
-            raise ValueError("Localization strategy is not set.")
+            Logger.log_error(ValueError("Localization strategy is not set."))
+            Logger.log_service_end(self.serviceName, withError=True)
+            return None
+
         # Get the candidates from the repository
         candidates: list[Candidate] = self.get_candidates(repository, self.loc_level)
+        if candidates is None:
+            Logger.log_service_end(self.serviceName, withError=True)
+            return None
+
         # Tokenize the issue description
+        Logger.log("Tokenizing issue description...\n")
         issue.set_tokens(self.tokenizer.tokenize(issue.description))
+        Logger.log_success(
+            f"Issue description tokenized into {len(issue.get_tokens())} tokens\n"
+        )
 
         # Use the strategy to localize the issue
-        candidates = self.strategy.localize(candidates=candidates, issue=issue, top_k=self.top_k)
+        candidates = self.strategy.localize(
+            candidates=candidates, issue=issue, top_k=self.top_k
+        )
         self.log_localization_results(candidates)
+        Logger.log_service_end(self.serviceName, withError=False)
         return candidates
 
     def get_candidates(
         self, repository: Repository, loc_level: LocalizationLevel
-    ) -> list[Candidate]:
+    ) -> list[Candidate] | None:
         """
         Retrieves candidates from the repository based on the localization level.
 
@@ -57,6 +82,9 @@ class LocalizationService:
             Returns:
             list[Candidate]: A list of candidates.
         """
+        Logger.log(
+            f"Retrieving all localization candidates at {loc_level.name} level...\n"
+        )
         candidates: list[Candidate] = []
         match loc_level:
             case LocalizationLevel.FILE:
@@ -68,8 +96,13 @@ class LocalizationService:
                 )
                 candidates.extend(function_level_candidates)
             case _:
-                raise ValueError(f"Unsupported localization level: {loc_level}")
+                Logger.log_failed(
+                    ValueError(f"Unsupported localization level: {loc_level}")
+                )
+                return None
 
+        Logger.log(f"Created {len(candidates)} {self.loc_level.name} candidates.")
+        Logger.log_success()
         return candidates
 
     def handle_file_level_candidates(
@@ -84,6 +117,7 @@ class LocalizationService:
         Returns:
             list[FileCandidate]: A list of file-level candidates.
         """
+        Logger.log(f"Creating {self.loc_level.name} candidates...")
         file_candidates: list[FileCandidate] = []
         for document in repository.documents:
             content: str = document.read_content()
@@ -96,6 +130,7 @@ class LocalizationService:
                 tokens=self.tokenizer.tokenize(content),
             )
             file_candidates.append(file_candidate)
+        Logger.log_success()
         return file_candidates
 
     def handle_function_level_candidates(
@@ -110,6 +145,7 @@ class LocalizationService:
         Returns:
             list[FunctionCandidate]: A list of function-level candidates.
         """
+        Logger.log(f"Creating {self.loc_level.name} candidates...")
         candidates: list[FunctionCandidate] = []
         next_candidate_id = 0
         for document in repository.documents:
@@ -122,6 +158,9 @@ class LocalizationService:
             try:
                 tree = ast.parse(content, filename=str(document.path))
             except SyntaxError:
+                Logger.log_error(
+                    SyntaxError(f"Invalid Python syntax in {document.path}")
+                )
                 # A file with invalid Python syntax cannot be parsed reliably.
                 continue
 
@@ -148,7 +187,7 @@ class LocalizationService:
                     )
                 )
                 next_candidate_id += 1
-
+        Logger.log_success()
         return candidates
 
     def log_localization_results(self, candidates: list[Candidate]):
@@ -162,12 +201,15 @@ class LocalizationService:
             print("No candidates were localized.")
             return
 
-        print(f"Localization completed successfully with {len(candidates)} candidates.")
+        Logger.log("/nLocalization results:/n")
+        print(f"Listing top {len(candidates)} candidates:")
         for candidate in candidates:
             if isinstance(candidate, FileCandidate):
-                print(f"File Candidate: {candidate.filePath}")
-            elif isinstance(candidate, FunctionCandidate):
-                print(
-                    f"Function Candidate: {candidate.function_name} in {candidate.filePath} "
-                    f"(Lines {candidate.start_line}-{candidate.end_line})"
+                Logger.log(
+                    f"Rank: {candidates.index(candidate)+1} | File Candidate: {candidate.filePath.relative_to(Path.cwd())}"
                 )
+            elif isinstance(candidate, FunctionCandidate):
+                Logger.log(
+                    f"Rank: {candidates.index(candidate)+1} | Function Candidate: {candidate.function_name} in module {candidate.filePath.relative_to(Path.cwd())}"
+                )
+                Logger.log(f"(Lines {candidate.start_line}-{candidate.end_line})")

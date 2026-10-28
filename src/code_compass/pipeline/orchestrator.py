@@ -84,7 +84,7 @@ class CodeCompassPipeline:
 
         if self.state != SystemState.INITIALIZED:
             Logger.log(
-                f"Issue Localization attempted before repository initialization : {Logger.red('Exiting with error')}"
+                f"Issue Localization attempted before Repository Initialization : {Logger.red('Exiting with error')}"
             )
             return IssueLocalizationResponse(
                 status=ResponseStatus.FAILURE,

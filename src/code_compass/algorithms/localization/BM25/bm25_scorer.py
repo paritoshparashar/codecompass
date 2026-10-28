@@ -3,14 +3,17 @@ from math import log
 
 from ....domain.candidate_package import Candidate
 from ....domain.issue import Issue
+from ....logger import Logger
 
 
 class BM25Scorer:
     def __init__(self, k1: float = 1.5, b: float = 0.75):
         if k1 < 0:
-            raise ValueError("k1 must be non-negative")
+            Logger.log_failed(ValueError("k1 must be non-negative"))
+            return
         if not 0.0 <= b <= 1.0:
-            raise ValueError("b must be between 0 and 1")
+            Logger.log_failed(ValueError("b must be in the range [0, 1]"))
+            return
 
         self.k1 = k1
         self.b = b
@@ -24,33 +27,42 @@ class BM25Scorer:
         if not candidates:
             return []
 
+        Logger.log_start("Calculating BM25 scores for each candidate...")
+
         query_tokens = {
             token.normalized for token in issue.get_tokens() if token.normalized
         }
 
+        Logger.log("Calculating term frequencies for each candidate...")
         term_frequencies = [
             Counter(token.normalized for token in candidate.tokens if token.normalized)
             for candidate in candidates
         ]
-
+        # display the first 1 term frequencies for debugging for 1 candidates in logger
+        Logger.log(f"Term Frequencies for first 1 candidates: {term_frequencies[:1]}\n")
         document_lengths = [
             sum(frequencies.values()) for frequencies in term_frequencies
         ]
+        Logger.log(f"Document lengths for first 10 candidates: {document_lengths[:10]}\n")
 
         average_document_length = sum(document_lengths) / len(candidates)
+        Logger.log(f"Average document length: {average_document_length:.1f}\n")
 
         document_frequency: Counter[str] = Counter()
 
         for frequencies in term_frequencies:
             # Each normalized term contributes at most once per candidate.
             document_frequency.update(frequencies.keys())
+        Logger.log(f"Document frequency for first 10 candidates: {dict(list(document_frequency.items())[:10])}\n")
 
         idf_scores = self._calculate_idf(
             query_tokens,
             document_frequency,
             len(candidates),
         )
+        Logger.log(f"IDF scores for first 5 query tokens: {dict(list(idf_scores.items())[:5])}\n")
 
+        Logger.log_end("BM25 scoring completed")
         return [
             self._score_document(
                 query_tokens,

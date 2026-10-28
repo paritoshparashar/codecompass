@@ -1,15 +1,15 @@
-from typing import Protocol
+from abc import ABC, abstractmethod
 
 from ...domain.candidate_package import Candidate
 from ...domain.issue import Issue
 
 
-class LocalizationStrategy(Protocol):
+class LocalizationStrategy(ABC):
     """
     A protocol for defining localization strategies.
     """
-
-    def localize(self, candidates: list[Candidate], issue: Issue, top_k: int) -> list[Candidate]:
+    @abstractmethod
+    def localize(self, candidates: list[Candidate], issue: Issue, top_k: int) -> list[Candidate] | None:
         """
         Localizes the given issue within the provided candidates.
         Modifies the candidates in place based on the issue.

@@ -11,12 +11,15 @@ __all__ = ["RepositoryInitializationService"]
 class RepositoryInitializationService:
     def __init__(self, root_folder: Path) -> None:
         self._root_folder = root_folder
+        self.serviveName = "Repository Initialization"
 
     def initialize_repository(self, git_url: str, branch: str) -> Repository | None:
-        Logger.log_start("Repository Initialization Service: Started")
+        Logger.log_start(f"{self.serviveName} Service: Started")
+
         # Logic to initialize the repository
         if not self._validate_github_url(git_url):
-            return self._log_service_end(withError=True)
+            Logger.log_service_end(self.serviveName, withError=True)
+            return None
 
         # create unique id to store the repository in the system
         repository_id = hash(git_url + branch) % (10**8)
@@ -25,7 +28,8 @@ class RepositoryInitializationService:
         destination.parent.mkdir(parents=True, exist_ok=True)
         # clone the repository using git
         if not self._clone_repository(git_url, branch, destination):
-            return self._log_service_end(withError=True)
+            Logger.log_service_end(self.serviveName, withError=True)
+            return None
 
         repository = Repository(
             id=repository_id,
@@ -36,9 +40,10 @@ class RepositoryInitializationService:
 
         # Initialize the repo for the system
         if not self._initialize_repository(repository):
-            return self._log_service_end(withError=True)
+            Logger.log_service_end(self.serviveName, withError=True)
+            return None
 
-        self._log_service_end(withError=False)
+        Logger.log_service_end(self.serviveName, withError=False)
         return repository
 
     def _initialize_repository(self, repository: Repository) -> bool:
@@ -72,27 +77,28 @@ class RepositoryInitializationService:
                     repository_id=repository.id,
                 )
                 repository.add_document(document)
+
+            Logger.log_success()
+            return True
+
         except (OSError, TypeError, ValueError) as e:
-            Logger.log(f"{Logger.red('Failed')} {e}")
+            Logger.log_failed(e)
             return False
-        Logger.log(f"{Logger.green('Successful')}")
-        return True
 
     def _validate_github_url(self, git_url: str) -> bool:
         # Logic to validate the GitHub URL
         valid_prefixes = ("https://github.com/", "http://github.com/")
+        Logger.log(f"Validating GitHub URL: {git_url}...")
 
         if not git_url.startswith(valid_prefixes):
-            Logger.log(
-                f"Validating GitHub URL...\n'{git_url}': {Logger.red('Invalid (Prefix)')}\n"
-            )
+            Logger.log_failed(ValueError("Invalid(Prefix) GitHub URL"))
             return False
-        Logger.log(f"GitHub URL '{git_url}': {Logger.green('Valid')}\n")
+        Logger.log_success()
         return True
 
     def _clone_repository(self, git_url: str, branch: str, destination: Path) -> bool:
         Logger.log(
-            f"Cloning Repository...\nfrom URL: {git_url}\nto destination: {destination.relative_to(Path.cwd())}"
+            f"Cloning Repository...\nfrom URL: {git_url}\nto Destination: {destination.relative_to(Path.cwd())}"
         )
         # Logic to clone the repository using git
         try:
@@ -109,18 +115,8 @@ class RepositoryInitializationService:
                 capture_output=True,
                 text=True,
             )
-            Logger.log(f"{Logger.green('Successful')}\n")
+            Logger.log_success()
             return True
         except subprocess.CalledProcessError as e:
-            Logger.log_end(f"{Logger.red('Failed')}: {e.stderr}")
+            Logger.log_failed(e)
             return False
-
-    def _log_service_end(self, withError: bool) -> None:
-        if withError:
-            Logger.log_end(
-                f"Repository Initialization Service: {Logger.red('Exited with Error')}"
-            )
-        else:
-            Logger.log_end(
-                f"Repository Initialization Service: {Logger.green('Exited Successfully')}"
-            )

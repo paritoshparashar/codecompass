@@ -6,6 +6,7 @@ from ....application.localization_package.localization_strategy import (
 )
 from ....domain.candidate_package import Candidate
 from ....domain.issue import Issue
+from ....logger import Logger
 from .bm25_scorer import BM25Scorer
 
 
@@ -18,12 +19,15 @@ class BM25LocalizationStrategy(LocalizationStrategy):
         candidates: list[Candidate],
         issue: Issue,
         top_k: int
-    ) -> list[Candidate]:
+    ) -> list[Candidate] | None:
         if top_k < 0:
-            raise ValueError("top_k must be non-negative")
+            Logger.log_failed(ValueError("top_k must be non-negative"))
+            return None
 
         if not candidates or top_k == 0:
             return []
+
+        Logger.log_start("Localizing Issue using BM25 strategy.../n")
 
         scores = self.bm25_scorer.score(candidates, issue)
 
@@ -37,4 +41,6 @@ class BM25LocalizationStrategy(LocalizationStrategy):
             candidate.score = score
             candidate.rank = rank
 
+        Logger.log_success(f"Top {top_k} candidates localized using BM25 strategy.")
+        Logger.log_end("BM25 Localization Strategy: Completed")
         return [candidate for candidate, _ in ranked[:top_k]]

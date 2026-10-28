@@ -67,7 +67,7 @@ def issue_localization(
     issueFilePath = repo_issue_folder / "issue_description.txt"
     issueFilePath.touch(exist_ok=True)
     Logger.log(
-        "\nAn 'issue_description.txt' file has been created. \nPlease enter the issue description in the file, save it, and close the file when done.\n"
+        f"\nAn 'issue_description.txt' file has been created at {issueFilePath}. \nPlease enter the issue description in the file, save it, and close the file when done.\n"
     )
     # ask the user y/n if they want to continue after entering the issue description
     input("Press Enter to continue after entering the issue description in the file...")

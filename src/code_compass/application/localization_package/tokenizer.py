@@ -48,7 +48,6 @@ class Tokenizer:
             result.extend(current)
             # Preserve the original token as well.
             result.append(self.create_token(token))
-
         return result
 
     @staticmethod
