@@ -201,7 +201,7 @@ class LocalizationService:
             print("No candidates were localized.")
             return
 
-        Logger.log("/nLocalization results:/n")
+        Logger.log("\nLocalization results:\n")
         print(f"Listing top {len(candidates)} candidates:")
         for candidate in candidates:
             if isinstance(candidate, FileCandidate):

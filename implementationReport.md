@@ -14,8 +14,15 @@
 ## Complete the tokenization pipeline 
 - Check the token creation, there is no vocabulary yet - use a pre existing one maybe 
 
-# Thing to-do
+# Tasks done 28/10/2026
 ## Logging
 - for complete localization step
+
+# Tasks done 30/a10/2026
+
+# Thing to-do
 ## Tests 
 - for the bm25, localizaiton pipeline, tokenization
+## Localization technique - Word Embedding
+## Test the BM25 localization on a test data - so when including new technique to loalize, you can evalute if it improves or not
+## Issueclassification
