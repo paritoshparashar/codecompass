@@ -8,3 +8,5 @@ concepts/
 issuesDirectory/
 __pycache__/
 tests/
+.DS_Store
+.venv/
