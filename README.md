@@ -11,38 +11,59 @@ CodeCompass is a developer tooling and AI engineering system designed to investi
 CodeCompass is built using **Domain-Driven Design (DDD)**, **Hexagonal/Clean Architecture**, and the **Strategy Pattern**. The core domain logic is decoupled from execution adapters (CLI, FastAPI) and algorithmic strategies.
 
 ```mermaid
+
 flowchart TD
-    User([User / CLI / API]) --> Orchestrator[Pipeline Orchestrator]
+    A["Software Issue<br/>Title and Description"]
+    B["Repository Snapshot"]
 
-    subgraph Initialization ["1. Repository Initialization"]
-        ServiceCreater[ServiceCreater / Factory]
-        RepoInit[RepositoryInitializationService]
-        RepoReader[RepoReader]
-        RepoManager[(RepositoryManager)]
-        RepoInit --> RepoReader
-        RepoInit --> RepoManager
+    subgraph S1["Repository Understanding"]
+        B --> C["Source Code Parsing"]
+        C --> D["AST and Repository Graph"]
+        C --> E["Code Index"]
     end
 
-    subgraph Localization ["2. Fault Localization (Current State)"]
-        LocService[LocalizationService]
-        Tokenizer[Code-Aware Tokenizer]
-        CandidateGen[Candidate Generator\n(File & AST Function Levels)]
-        BM25[BM25 Localization Strategy\n(Okapi BM25 Scorer)]
-        
-        LocService --> CandidateGen
-        LocService --> Tokenizer
-        LocService --> BM25
+    subgraph S2["Issue Analysis"]
+        A --> F["Issue Classification<br/>(Next)"]
+        A --> G["Hybrid Retrieval"]
+        E --> G
+        G --> H["Hierarchical Localization<br/>File → Function → Line"]
+        D --> H
     end
 
-    subgraph FuturePipelines ["3. Resolution & Evidence (Roadmap)"]
-        Classifier[Issue Classifier\n(TF-IDF vs Embeddings + Abstention)]
-        Evidence[Typed Evidence Pipeline\n(Repro Test / Trace-Diff / Mutation)]
-        Diagnosis[Grounded Guide & Diagnosis\n(LLM Bound to Evidence)]
+    F --> I{"Answerable?"}
+    I -->|No| J["Abstention<br/>Ask Clarifying Questions"]
+    I -->|Yes| K["Select Evidence Strategy"]
+    H --> K
+
+    subgraph S3["Evidence Collection"]
+        K --> L["Bug<br/>Reproduction and Execution Evidence"]
+        K --> M["Feature<br/>Structural Analogy"]
+        K --> N["Test Gap<br/>Mutation Testing"]
+        K --> O["Documentation<br/>Call-site Analysis"]
+        K --> P["Performance<br/>Profiling"]
     end
 
-    Orchestrator --> RepoInit
-    Orchestrator --> LocService
-    Orchestrator -.-> FuturePipelines
+    L --> Q["Evidence Bundle"]
+    M --> Q
+    N --> Q
+    O --> Q
+    P --> Q
+
+    Q --> R["Evidence Evaluation"]
+    R --> T["Grounded Diagnosis"]
+    T --> U["Action Plan and Next Steps"]
+    U --> V["Validation"]
+    V -.-> W["Bounded Feedback Loop"]
+    W -.-> H
+
+    classDef done fill:#d1fae5,stroke:#059669,color:#064e3b
+    classDef upcoming fill:#fef3c7,stroke:#d97706,color:#78350f
+    classDef planned fill:#e2e8f0,stroke:#64748b,color:#1e293b
+
+    class C,D,E,G,H done
+    class F upcoming
+    class I,J,K,L,M,N,O,P,Q,R,T,U,V,W planned
+
 ```
 
 ---
