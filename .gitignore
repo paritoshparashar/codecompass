@@ -1,0 +1,9 @@
+.agents/
+.vscode/
+AGENTS.md
+PROBLEM.md
+clonedRepository/
+clonedRepository2/
+concepts/
+issuesDirectory/
+__pycache__/
