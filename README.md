@@ -68,6 +68,37 @@ flowchart TD
 
 ---
 
+## Project Structure
+
+```text
+CodeCompass/
+|
+├── src/
+│   └── code_compass/
+│       ├── algorithms/           # Algorithmic cores
+|       |   └── classification/       # (Rulebased Baseline, BM25Vectorizer + Logistic Regression)
+|       |   └── localization/         # (BM25Scorer, BM25Strategy, Tokenizer)
+│       ├── application/          # Use-case services (Localization, RepoInit, etc.)
+|       |   └── classification/       # (Classification Service)
+|       |   └── localization/         # (Localization Service)
+|       |   └── initialization/       # (Initialization Service)
+│       ├── domain/               # Core entities (Repository, Document, Candidate, Issue, Token)
+|       |   └── candidate_package/    # (Localized Candidates entity)
+|       |   └── repository_package/   # (Repository entity)
+|       |   └── token_package/        # (Tokens entity)
+│       └── pipeline/             # Orchestrator, ServiceCreater, I/O schemas
+|       └── logger.py             # Static Logger Object File
+|       └── run.py                # CLI - Entry Point 
+|
+├── tests/
+│   └── unitTests/                # Hermetic unit & integration test suites
+├── pyproject.toml                # Project metadata & dependency specifications
+└── README.md                     # Project documentation
+```
+
+
+---
+
 ## Current Implementation Status
 
 ### ✅ What is Implemented & Working:
@@ -170,35 +201,5 @@ Instead of speculative LLM code generation, gather empirical evidence at candida
 ### Phase 4: Grounded Diagnosis & Guide (Phase C)
 - Local LLM diagnosis (Ollama / Llama-3-8B / Groq free-tier) strictly constrained to cite entities present in the evidence bundle (hallucination defense).
 - Multi-armed bandit / Thompson Sampling for dynamic cost- and latency-aware model routing.
-
----
-
-## Project Structure
-
-```text
-CodeCompass/
-|
-├── src/
-│   └── code_compass/
-│       ├── algorithms/           # Algorithmic cores
-|       |   └── classification/       # (Rulebased Baseline, BM25Vectorizer + Logistic Regression)
-|       |   └── localization/         # (BM25Scorer, BM25Strategy, Tokenizer)
-│       ├── application/          # Use-case services (Localization, RepoInit, etc.)
-|       |   └── classification/       # (Classification Service)
-|       |   └── localization/         # (Localization Service)
-|       |   └── initialization/       # (Initialization Service)
-│       ├── domain/               # Core entities (Repository, Document, Candidate, Issue, Token)
-|       |   └── candidate_package/    # (Localized Candidates entity)
-|       |   └── repository_package/   # (Repository entity)
-|       |   └── token_package/        # (Tokens entity)
-│       └── pipeline/             # Orchestrator, ServiceCreater, I/O schemas
-|       └── logger.py             # Static Logger Object File
-|       └── run.py                # CLI - Entry Point 
-|
-├── tests/
-│   └── unitTests/                # Hermetic unit & integration test suites
-├── pyproject.toml                # Project metadata & dependency specifications
-└── README.md                     # Project documentation
-```
 
 ---
