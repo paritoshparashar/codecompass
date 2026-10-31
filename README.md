@@ -177,17 +177,24 @@ Instead of speculative LLM code generation, gather empirical evidence at candida
 
 ```text
 CodeCompass/
-├── concepts/                     # Deep-dive study guides for engineering interviews
-│   ├── 01-testing-and-isolation/
-│   ├── 02-python-internals-and-typing/
-│   ├── 03-information-retrieval-and-nlp/
-│   └── 04-software-architecture-and-code-analysis/
+|
 ├── src/
 │   └── code_compass/
-│       ├── algorithms/           # Algorithmic cores (BM25Scorer, BM25Strategy)
+│       ├── algorithms/           # Algorithmic cores
+|       |   └── classification/       # (Rulebased Baseline, BM25Vectorizer + Logistic Regression)
+|       |   └── localization/         # (BM25Scorer, BM25Strategy, Tokenizer)
 │       ├── application/          # Use-case services (Localization, RepoInit, etc.)
+|       |   └── classification/       # (Classification Service)
+|       |   └── localization/         # (Localization Service)
+|       |   └── initialization/       # (Initialization Service)
 │       ├── domain/               # Core entities (Repository, Document, Candidate, Issue, Token)
+|       |   └── candidate_package/    # (Localized Candidates entity)
+|       |   └── repository_package/   # (Repository entity)
+|       |   └── token_package/        # (Tokens entity)
 │       └── pipeline/             # Orchestrator, ServiceCreater, I/O schemas
+|       └── logger.py             # Static Logger Object File
+|       └── run.py                # CLI - Entry Point 
+|
 ├── tests/
 │   └── unitTests/                # Hermetic unit & integration test suites
 ├── pyproject.toml                # Project metadata & dependency specifications
@@ -195,12 +202,3 @@ CodeCompass/
 ```
 
 ---
-
-## Engineering Concepts & Study Guides
-
-For detailed architectural notes, mathematical derivations, and technical interview guides, explore the [`concepts/`](./concepts/README.md) directory:
-- [Testing & Isolation in AI Systems](./concepts/01-testing-and-isolation/README.md)
-- [Python Metaclasses, Dataclasses & Imports](./concepts/02-python-internals-and-typing/README.md)
-- [Okapi BM25 Derivation & Code Tokenization](./concepts/03-information-retrieval-and-nlp/README.md)
-- [AST vs. Regex & DDD Aggregate Roots](./concepts/04-software-architecture-and-code-analysis/README.md)
-
