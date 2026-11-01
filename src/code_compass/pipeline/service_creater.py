@@ -4,6 +4,9 @@ from ..algorithms.localization.BM25.bm25_localization_strategy import (
     BM25LocalizationStrategy,
     BM25Scorer,
 )
+from ..application.classification_package.classification_service import (
+    ClassificationService,
+)
 from ..application.initialization_package.repostiory_initialization_service import (
     RepositoryInitializationService,
 )
@@ -44,3 +47,8 @@ class ServiceCreater:
                 raise ValueError(f"Unsupported strategy: {config.strategy}")
 
         return LocalizationService(strategy=strategy, loc_level=config.level, top_k=config.top_k)
+
+    def create_classification_service(self) -> ClassificationService:
+        # For now, we can hardcode the strategy. In a real-world scenario, this could be configurable.
+        strategy = "simple"  # or "advanced"
+        return ClassificationService(strategy=strategy)

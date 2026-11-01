@@ -13,7 +13,7 @@ class FunctionCandidate(Candidate):
         file_path: Path,
         function_name: str,
         start_line: int,
-        end_line: int,
+        end_line: int | None,
         tokens: list[Token] | None = None,
     ):
         super().__init__(

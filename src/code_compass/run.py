@@ -8,6 +8,8 @@ from .pipeline import (
     CodeCompassPipeline,
     InitializeRepositoryRequest,
     InitializeRepositoryResponse,
+    IssueClassificationRequest,
+    IssueClassificationResponse,
     IssueLocalizationRequest,
     IssueLocalizationResponse,
     ResponseStatus,
@@ -30,15 +32,40 @@ def main() -> None:
 
     # Repository Initialization
     repository_initialization_response = repostiroy_initialization(orchestrator)
-    if repository_initialization_response.status != ResponseStatus.SUCCESS:
-        exit_app(orchestrator)
+    if (
+        repository_initialization_response.status != ResponseStatus.SUCCESS
+        or repository_initialization_response.repository_id is None
+    ):
+        return exit_app(orchestrator)
+
+    current_repository_id: int = repository_initialization_response.repository_id
 
     # Issue Localization
     issue_localization_response = issue_localization(
-        orchestrator, repository_initialization_response
+        orchestrator, current_repository_id
     )
-    if issue_localization_response.status != ResponseStatus.SUCCESS:
-        exit_app(orchestrator)
+    if (
+        issue_localization_response.status != ResponseStatus.SUCCESS
+        or issue_localization_response.issue_id is None
+    ):
+        return exit_app(orchestrator)
+
+    current_issue_id: int = issue_localization_response.issue_id
+
+    # Issue Classification
+    issue_classification_response = issue_classification(
+        orchestrator, repository_id=current_repository_id, issue_id=current_issue_id
+    )
+    if (
+        issue_classification_response.status != ResponseStatus.SUCCESS
+        or issue_classification_response.classification_result is None
+    ):
+        return exit_app(orchestrator)
+
+    issue_type = issue_classification_response.classification_result
+    Logger.log(
+        f"\nIssue Classification Result: The issue has been classified as '{issue_type.name}'."
+    )
 
     # Other operations later
     exit_app(orchestrator)
@@ -59,10 +86,10 @@ def repostiroy_initialization(
 
 
 def issue_localization(
-    orchestrator: CodeCompassPipeline, response: InitializeRepositoryResponse
+    orchestrator: CodeCompassPipeline, repository_id: int
 ) -> IssueLocalizationResponse:
     # Create a file to store the issue description at the specified Path
-    repo_issue_folder = Path("issuesDirectory") / f"issues_for_repo_{response.repository_id}"
+    repo_issue_folder = Path("issuesDirectory") / f"issues_for_repo_{repository_id}"
     repo_issue_folder.mkdir(parents=True, exist_ok=True)
     issueFilePath = repo_issue_folder / "issue_description.txt"
     issueFilePath.touch(exist_ok=True)
@@ -74,12 +101,26 @@ def issue_localization(
     issue: str = issueFilePath.read_text()
 
     issue_localization_request = IssueLocalizationRequest(
-        repository_id=response.repository_id, issue=issue
+        repository_id=repository_id, issue=issue
     )
     issue_localization_response: IssueLocalizationResponse = (
         orchestrator.localize_issue(issue_localization_request)
     )
     return issue_localization_response
+
+
+def issue_classification(
+    orchestrator: CodeCompassPipeline,
+    issue_id: int,
+    repository_id: int,
+) -> IssueClassificationResponse:
+    issue_classification_request = IssueClassificationRequest(
+        issue_id=issue_id, repository_id=repository_id
+    )
+    issue_classification_response: IssueClassificationResponse = (
+        orchestrator.classify_issue(issue_classification_request)
+    )
+    return issue_classification_response
 
 
 def exit_app(orchestrator: CodeCompassPipeline) -> None:

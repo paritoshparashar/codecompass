@@ -8,7 +8,7 @@ class Logger:
 
     @staticmethod
     def log_start(string: str):
-        Logger._print_start_separator(Logger)
+        Logger._print_start_separator()
         print(string)
         Logger.print_empty_line()
 
@@ -16,7 +16,7 @@ class Logger:
     def log_end(string: str):
         Logger.print_empty_line()
         print(string)
-        Logger._print_end_separator(Logger)
+        Logger._print_end_separator()
 
     @staticmethod
     def log(string: str):
@@ -50,7 +50,7 @@ class Logger:
             )
 
     @staticmethod
-    def log_success(str: None = None):
+    def log_success(str: str | None = None):
         if str is not None:
             Logger.log(f"{str}")
         Logger.log(f"{Logger.green('Success')}\n")
@@ -64,17 +64,21 @@ class Logger:
         Logger.log_error(error)
         Logger.log(f"{Logger.red('Failed')}")
 
-    def _print_start_separator(self):
+    @staticmethod
+    def _print_start_separator():
         print("-" * (100 / Logger._depth).__int__())
-        Logger._increment_depth(Logger)
+        Logger._increment_depth()
 
-    def _print_end_separator(self):
-        Logger._decrement_depth(Logger)
+    @staticmethod
+    def _print_end_separator():
+        Logger._decrement_depth()
         print("-" * (100 / Logger._depth).__int__())
 
-    def _increment_depth(self):
+    @staticmethod
+    def _increment_depth():
         Logger._depth += Logger._increment_factor
 
-    def _decrement_depth(self):
+    @staticmethod
+    def _decrement_depth():
         if Logger._depth > 1:
             Logger._depth -= Logger._increment_factor

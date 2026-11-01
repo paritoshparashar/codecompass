@@ -78,7 +78,9 @@ class RepositoryInitializationService:
                 )
                 repository.add_document(document)
 
+            repository.state = Repository.State.INITIALIZED
             Logger.log_success()
+
             return True
 
         except (OSError, TypeError, ValueError) as e:

@@ -1,6 +1,6 @@
 __all__ = ["CodeCompassPipeline"]
 
-from ..domain.issue import Issue
+from ..domain.issue import Issue, IssueType
 from ..domain.repository_package.repository import Repository
 from ..domain.repository_package.repository_manager import RepositoryManager
 from ..domain.systemStates import SystemState
@@ -8,6 +8,8 @@ from ..logger import Logger
 from ..pipeline.io_module import (
     InitializeRepositoryRequest,
     InitializeRepositoryResponse,
+    IssueClassificationRequest,
+    IssueClassificationResponse,
     IssueLocalizationRequest,
     IssueLocalizationResponse,
     ResponseStatus,
@@ -38,6 +40,9 @@ class CodeCompassPipeline:
         #  guide: GuideGenerator,
         #  feedback: FeedbackController,
         #  store: "RunStore")
+        self.initialization_service = None
+        self.localization_service = None
+        self.classification_service = None
         self.start_services(ServiceCreater())
         self.state = SystemState.NOT_INITIALIZED
         self.repositoryManager = RepositoryManager()
@@ -52,6 +57,7 @@ class CodeCompassPipeline:
     def start_services(self, creator: ServiceCreater):
         self.initialization_service = creator.create_initialization_service()
         self.localization_service = creator.create_localization_service()
+        self.classification_service = creator.create_classification_service()
 
     # def process(self, issue: Issue, config: Settings) -> RunReport:
     def create_and_initialize_repository(
@@ -60,7 +66,8 @@ class CodeCompassPipeline:
 
         Logger.log_start("Pipeline: Started")
         # Call create and initialize repository
-
+        if self.initialization_service is None:
+            raise ValueError("Initialization service is not set.")
         repository: Repository | None = (
             self.initialization_service.initialize_repository(
                 respoistoryRequest.git_url, respoistoryRequest.branch
@@ -72,44 +79,73 @@ class CodeCompassPipeline:
                 repository_id=None,
             )
         self.repositoryManager.add_repository(repository)
-        self.state = SystemState.INITIALIZED
         return InitializeRepositoryResponse(
             status=ResponseStatus.SUCCESS,
-            repository_id=str(repository.id),
+            repository_id=repository.id,
         )
 
     def localize_issue(
         self, localization_request: IssueLocalizationRequest
     ) -> IssueLocalizationResponse:
 
-        if self.state != SystemState.INITIALIZED:
+        repository = self.repositoryManager.get_repository(
+            localization_request.repository_id
+        )
+        if repository is None:
+            Logger.log(
+                f"Repository with ID {localization_request.repository_id} not found : {Logger.red('Exiting with error')}"
+            )
+            return IssueLocalizationResponse(
+                status=ResponseStatus.FAILURE,
+                localized_candidates=None,
+                issue_id=None,
+            )
+        if repository.state != Repository.State.INITIALIZED:
             Logger.log(
                 f"Issue Localization attempted before Repository Initialization : {Logger.red('Exiting with error')}"
             )
             return IssueLocalizationResponse(
                 status=ResponseStatus.FAILURE,
                 localized_candidates=None,
+                issue_id=None,
             )
-        self.issue = Issue(
-            issue_id=0,
+
+        # Create a new issue and add it to the repository
+        new_issue_id = len(repository.get_issues()) + 1
+        issue = Issue(
+            issue_id=new_issue_id,
             description=localization_request.issue,
         )
+        repository.add_issue(issue)
 
         # Call the localization service
-        localized_candidates = self.localization_service.localize_issue(
-            issue=self.issue,
-            repository=self.repositoryManager.get_repository(
-                localization_request.repository_id
-            ),
+        if self.localization_service is None:
+            raise ValueError("Localization service is not set.")
+        localized_candidates: list | None = self.localization_service.localize_issue(
+            issue=issue,
+            repository=repository,
         )
         if localized_candidates is None:
             return IssueLocalizationResponse(
                 status=ResponseStatus.FAILURE,
                 localized_candidates=None,
+                issue_id=new_issue_id,
             )
 
+        issue.add_localized_candidates(localized_candidates)
+
         return IssueLocalizationResponse(
-            status=ResponseStatus.SUCCESS, localized_candidates=localized_candidates
+            status=ResponseStatus.SUCCESS,
+            localized_candidates=localized_candidates,
+            issue_id=new_issue_id,
+        )
+
+    def classify_issue(
+        self, classification_request: IssueClassificationRequest
+    ) -> IssueClassificationResponse:
+        return IssueClassificationResponse(
+            status=ResponseStatus.FAILURE,
+            classification_result=IssueType.UNKNOWN,
         )
 
     def end(self):

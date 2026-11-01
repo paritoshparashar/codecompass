@@ -50,8 +50,8 @@ class LocalizationService:
             return None
 
         # Get the candidates from the repository
-        candidates: list[Candidate] = self.get_candidates(repository, self.loc_level)
-        if candidates is None:
+        total_candidates: list[Candidate] | None = self.get_candidates(repository, self.loc_level)
+        if total_candidates is None:
             Logger.log_service_end(self.serviceName, withError=True)
             return None
 
@@ -63,12 +63,15 @@ class LocalizationService:
         )
 
         # Use the strategy to localize the issue
-        candidates = self.strategy.localize(
-            candidates=candidates, issue=issue, top_k=self.top_k
+        ranked_candidates = self.strategy.localize(
+            candidates=total_candidates, issue=issue, top_k=self.top_k
         )
-        self.log_localization_results(candidates)
+        if ranked_candidates is None:
+            Logger.log_service_end(self.serviceName, withError=True)
+            return None
+        self.log_localization_results(ranked_candidates)
         Logger.log_service_end(self.serviceName, withError=False)
-        return candidates
+        return ranked_candidates
 
     def get_candidates(
         self, repository: Repository, loc_level: LocalizationLevel

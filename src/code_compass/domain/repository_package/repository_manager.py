@@ -6,7 +6,7 @@ class RepositoryManager:
     def __init__(self):
         self.repositories = {}
 
-    def get_repository(self, repo_id: int) -> Repository:
+    def get_repository(self, repo_id: int) -> Repository | None:
         return self.repositories.get(repo_id)
 
     def add_repository(self, repository: Repository) -> None:
