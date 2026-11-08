@@ -10,7 +10,8 @@ REPOSITORIES: list[tuple[str, str]] = [
     ("fastapi", "fastapi"),
     ("pallets", "flask"),
     ("psf", "requests"),
-    ("scikit-learn", "scikit-learn")
+    ("scikit-learn", "scikit-learn"),
+    ("clickhouse", "clickhouse"),  # for performance + testing
 ]
 
 MAX_PER_REPOSITORY = 150
@@ -21,15 +22,16 @@ BASE_URL = "https://api.github.com"
 
 HEADERS = {
     "Accept": "application/vnd.github+json",
-    "X-GitHub-Api-Version": "2026-03-10"
+    "X-GitHub-Api-Version": "2026-03-10",
 }
 token = os.getenv("GITHUB_TOKEN")
 if token:
     HEADERS["Authorization"] = f"Bearer {token}"
 
-def collect_repository (owner, repo):
-    print (f"Collecting issues for {owner}/{repo}...")
-    collected_issues = []
+
+def collect_repository(owner, repo, already_collected_issues_for_repo):
+    print(f"Collecting issues for {owner}/{repo}...")
+    collected_issues = already_collected_issues_for_repo.copy()
     page = 1
 
     while len(collected_issues) < MAX_PER_REPOSITORY:
@@ -39,12 +41,36 @@ def collect_repository (owner, repo):
             "sort": "created",
             "direction": "desc",
             "per_page": 100,
-            "page": page
+            "page": page,
         }
-        response = requests.get(
-            url, headers=HEADERS, params=params, timeout=30
-        )
-        response.raise_for_status()
+        response = requests.get(url, headers=HEADERS, params=params, timeout=30)
+        if response.status_code != 200:
+            print("\n========== GITHUB API ERROR ==========")
+            print("Repository:", owner, repo)
+            print("Page:", page)
+            print("Status:", response.status_code)
+
+            try:
+                print("GitHub message:", response.json())
+            except ValueError:
+                print("Response:", response.text)
+
+            print("Rate limit remaining:",
+                response.headers.get("X-RateLimit-Remaining"))
+
+            print("Rate limit reset:",
+                response.headers.get("X-RateLimit-Reset"))
+
+            print("Retry after:",
+                response.headers.get("Retry-After"))
+
+            print("Request ID:",
+                response.headers.get("X-GitHub-Request-Id"))
+
+            print("======================================\n")
+
+            break
+
         issues = response.json()
         if not issues:
             break
@@ -66,7 +92,9 @@ def collect_repository (owner, repo):
                 "url": issue.get("html_url"),
                 "repository": f"{owner}/{repo}",
                 "issue_number": issue.get("number"),
-                "github_labels": [label.get("name") for label in issue.get("labels", [])],
+                "github_labels": [
+                    label.get("name") for label in issue.get("labels", [])
+                ],
             }
 
             collected_issues.append(record)
@@ -78,21 +106,29 @@ def collect_repository (owner, repo):
 
     return collected_issues
 
+
 def main():
     OUTPUT_FILE.parent.mkdir(parents=True, exist_ok=True)
+    if not OUTPUT_FILE.exists() or OUTPUT_FILE.stat().st_size == 0:
+            with open(OUTPUT_FILE, "w") as f:
+                f.write("")  # Create an empty file
+
+    with open(OUTPUT_FILE, "r") as file:
+        existing_issues = [json.loads(line) for line in file if line.strip()]
     all_collected_issues = []
     for owner, repo in REPOSITORIES:
-        try:    
-            issues = collect_repository(owner, repo)
+        try:
+            all_collected_issues_for_repo = [
+                issue
+                for issue in existing_issues
+                if issue["repository"] == f"{owner}/{repo}"
+            ]
+            issues = collect_repository(owner, repo, all_collected_issues_for_repo)
             all_collected_issues.extend(issues)
         except requests.exceptions.RequestException as e:
             print(f"Error collecting issues for {owner}/{repo}: {e}")
             continue
 
-    # check if the output file does not exist or is empty, if so, create it
-    if not OUTPUT_FILE.exists() or OUTPUT_FILE.stat().st_size == 0:
-        with open(OUTPUT_FILE, "w") as f:
-            f.write("")  # Create an empty file
     # Write the collected issues to a JSONL file
     with open(OUTPUT_FILE, "w") as f:
         for issue in all_collected_issues:
@@ -100,6 +136,7 @@ def main():
 
     print(f"Collection Complete. Total issues collected: {len(all_collected_issues)}")
     print(f"Issues saved to {OUTPUT_FILE}")
+
 
 if __name__ == "__main__":
     main()

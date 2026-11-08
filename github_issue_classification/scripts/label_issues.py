@@ -17,11 +17,11 @@ from urllib.request import Request, urlopen
 LABELS = ("BUG", "FEATURE", "DOCUMENTATION", "PERFORMANCE", "TEST_GAP", "UNKNOWN")
 DEFAULT_GEMINI_MODEL = "gemini-3.8-flash"
 DEFAULT_GROQ_MODEL = "openai/gpt-oss-20b"
-LABELLED_ISSUES_FILE = Path(__file__).parent.parent / "data/labeled_issues.jsonl"
+
 # if the labelled issues file does not exist or is empty, use the raw issues file as input else use the labelled issues file as input
-RAW_ISSUES_FILE = Path(__file__).parent.parent / "data/raw_issues.jsonl"
-if LABELLED_ISSUES_FILE.exists() and LABELLED_ISSUES_FILE.stat().st_size > 0:
-    RAW_ISSUES_FILE = LABELLED_ISSUES_FILE
+INPUT_FILE = Path(__file__).parent.parent / "data/raw_issues.jsonl"
+OUTPUT_FILE = Path(__file__).parent.parent / "data/labeled_issues.jsonl"
+
 MAX_TEXT_CHARS = 8_000
 CONFIDENCE_THRESHOLD = 0.75
 MAX_RETRIES = 3
@@ -106,7 +106,7 @@ def request_json(
             if attempt == max_retries:
                 raise APIRequestError(f"Network request failed: {error}") from error
             delay = 2**attempt
-        time.sleep(delay * 10 + random.uniform(0, 0.5))
+        time.sleep(delay + random.uniform(0, 0.5))
     raise APIRequestError("Request failed without a response.")
 
 
@@ -301,14 +301,10 @@ def process_row(
     )
 
 
-def main() -> None:
-    groq_key = GROQ["api_key"]
-    if not groq_key:
-        raise SystemExit("Set GROQ_API_KEY first.")
-    records = read_records(RAW_ISSUES_FILE)
-    if not records:
-        raise SystemExit(f"No issue records found in {RAW_ISSUES_FILE}.")
-
+def updateOutputFile():
+    # if output file contains less records than input file, copy missing records from input file to output file
+    input_records = read_records(INPUT_FILE)
+    output_records = read_records(OUTPUT_FILE) if OUTPUT_FILE.exists() else []
     generated_fields = (
         "groq1_label",
         "groq1_label_confidence",
@@ -322,10 +318,27 @@ def main() -> None:
         "label_status",
         "label_error",
     )
-    for record in records:
-        for field in generated_fields:
-            record.setdefault(field, "")
-    write_records(LABELLED_ISSUES_FILE, records)
+    if len(output_records) < len(input_records):
+        missing_records = input_records[len(output_records) :]
+        for record in missing_records:
+            for field in generated_fields:
+                record.setdefault(field, "")
+        output_records.extend(missing_records)
+        write_records(OUTPUT_FILE, output_records)
+        print(
+            f"Copied {len(missing_records)} missing issue from {INPUT_FILE} to {OUTPUT_FILE}."
+        )
+
+
+def main() -> None:
+
+    updateOutputFile()
+    groq_key = GROQ["api_key"]
+    if not groq_key:
+        raise SystemExit("Set GROQ_API_KEY first.")
+    records = read_records(OUTPUT_FILE)
+    if not records:
+        raise SystemExit(f"No issue records found in {OUTPUT_FILE}.")
 
     processed = 0
     i = 0
@@ -352,21 +365,21 @@ def main() -> None:
                     "needs_review": "true",
                 }
             )
-            write_records(LABELLED_ISSUES_FILE, records)
+            write_records(OUTPUT_FILE, records)
             print(f"Error: {error}")
             print(
-                f"Saved {LABELLED_ISSUES_FILE};\nProcessed {processed} issues in the current run\nTotal labeled issues: {i}"
+                f"Saved to {OUTPUT_FILE};\nProcessed {processed} issues in the current run\nTotal labeled issues: {i}"
             )
             return
-        write_records(LABELLED_ISSUES_FILE, records)
+        write_records(OUTPUT_FILE, records)
         processed += 1
         print(
             f"Wrote labeled issue {record.get('repository')}#{record.get('issue_number')} to file\nLabel: {record.get('my_label')}, Confidence: {record.get('llm_confidence')}, Source: {record.get('label_source')}."
         )
-    write_records(LABELLED_ISSUES_FILE, records)
+    write_records(OUTPUT_FILE, records)
 
     print(
-        f"Saved {LABELLED_ISSUES_FILE};\nProcessed {processed} issues in the current run\nTotal labeled issues: {i}"
+        f"Saved to {OUTPUT_FILE};\nProcessed {processed} issues in the current run\nTotal labeled issues: {i}"
     )
 
 
