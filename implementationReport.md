@@ -18,7 +18,15 @@
 ## Logging
 - for complete localization step
 
-# Tasks done 30/a10/2026
+# Tasks done 30/10/2026
+
+# Task done from 1 - 4 Oct
+- Issue Data Collection
+- Labelling Data
+- Validatino and Preparing data for classification
+
+# 8th October/2026
+## Classification
 
 # Thing to-do
 ## Tests 

@@ -42,11 +42,11 @@ class Logger:
     def log_service_end(serviceName: str, withError: bool) -> None:
         if withError:
             Logger.log_end(
-                f" {serviceName} Service: {Logger.red('Exited with Error')}"
+                f"{serviceName} Service: {Logger.red('Exited with Error')}"
             )
         else:
             Logger.log_end(
-                f" {serviceName} Service: {Logger.green('Exited Successfully')}"
+                f"{serviceName} Service: {Logger.green('Exited Successfully')}"
             )
 
     @staticmethod

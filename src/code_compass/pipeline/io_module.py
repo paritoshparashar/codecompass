@@ -57,4 +57,4 @@ class IssueClassificationRequest(BaseModel):
 
 class IssueClassificationResponse(BaseModel):
     status: ResponseStatus
-    classification_result: IssueType
+    classification_result: IssueType | None

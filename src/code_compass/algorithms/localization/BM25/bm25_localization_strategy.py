@@ -1,4 +1,3 @@
-
 __all__ = ["BM25LocalizationStrategy"]
 
 from ....application.localization_package.localization_strategy import (
@@ -15,10 +14,7 @@ class BM25LocalizationStrategy(LocalizationStrategy):
         self.bm25_scorer = scorer
 
     def localize(
-        self,
-        candidates: list[Candidate],
-        issue: Issue,
-        top_k: int
+        self, candidates: list[Candidate], issue: Issue, top_k: int
     ) -> list[Candidate] | None:
         if top_k < 0:
             Logger.log_failed(ValueError("top_k must be non-negative"))

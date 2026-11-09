@@ -24,6 +24,7 @@ class Repository:
     class State(Enum):
         NOT_INITIALIZED = auto()  # system is not initialized yet
         INITIALIZED = auto()  # system is ready to accept a new issue
+        LOCALIZED = auto()  # system has localized the issue
 
     def __init__(
         self,

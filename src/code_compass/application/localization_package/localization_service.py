@@ -4,6 +4,7 @@ __all__ = ["LocalizationService"]
 import ast
 from pathlib import Path
 
+from ...application.service import Service
 from ...domain.candidate_package.candidate_interface import Candidate
 from ...domain.candidate_package.file_candidate import FileCandidate
 from ...domain.candidate_package.function_candidate import FunctionCandidate
@@ -17,7 +18,7 @@ from .localization_strategy import (
 from .tokenizer import Tokenizer
 
 
-class LocalizationService:
+class LocalizationService(Service):
     def __init__(
         self,
         strategy: LocalizationStrategy,

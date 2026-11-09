@@ -43,7 +43,9 @@ class BM25Scorer:
         document_lengths = [
             sum(frequencies.values()) for frequencies in term_frequencies
         ]
-        Logger.log(f"Document lengths for first 10 candidates: {document_lengths[:10]}\n")
+        Logger.log(
+            f"Document lengths for first 10 candidates: {document_lengths[:10]}\n"
+        )
 
         average_document_length = sum(document_lengths) / len(candidates)
         Logger.log(f"Average document length: {average_document_length:.1f}\n")
@@ -53,14 +55,18 @@ class BM25Scorer:
         for frequencies in term_frequencies:
             # Each normalized term contributes at most once per candidate.
             document_frequency.update(frequencies.keys())
-        Logger.log(f"Document frequency for first 10 candidates: {dict(list(document_frequency.items())[:10])}\n")
+        Logger.log(
+            f"Document frequency for first 10 candidates: {dict(list(document_frequency.items())[:10])}\n"
+        )
 
         idf_scores = self._calculate_idf(
             query_tokens,
             document_frequency,
             len(candidates),
         )
-        Logger.log(f"IDF scores for first 5 query tokens: {dict(list(idf_scores.items())[:5])}\n")
+        Logger.log(
+            f"IDF scores for first 5 query tokens: {dict(list(idf_scores.items())[:5])}\n"
+        )
 
         Logger.log_end("BM25 scoring completed")
         return [

@@ -2,7 +2,7 @@ __all__ = ["ClassificationStrategy"]
 
 from abc import ABC, abstractmethod
 
-from ...domain.issue import Issue
+from ...domain.issue import Issue, IssueType
 
 
 class ClassificationStrategy(ABC):
@@ -11,7 +11,7 @@ class ClassificationStrategy(ABC):
     """
 
     @abstractmethod
-    def classify(self, issue: Issue) -> None:
+    def classify(self, issue: Issue) -> IssueType:
         """
         Classifies the given issue.
 

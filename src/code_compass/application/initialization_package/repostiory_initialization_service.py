@@ -1,6 +1,7 @@
 import subprocess
 from pathlib import Path
 
+from ...application.service import Service
 from ...domain.repository_package import *
 from ...logger import Logger
 from .repository_reader import RepoReader
@@ -8,7 +9,7 @@ from .repository_reader import RepoReader
 __all__ = ["RepositoryInitializationService"]
 
 
-class RepositoryInitializationService:
+class RepositoryInitializationService(Service):
     def __init__(self, root_folder: Path) -> None:
         self._root_folder = root_folder
         self.serviveName = "Repository Initialization"
@@ -78,7 +79,6 @@ class RepositoryInitializationService:
                 )
                 repository.add_document(document)
 
-            repository.state = Repository.State.INITIALIZED
             Logger.log_success()
 
             return True
