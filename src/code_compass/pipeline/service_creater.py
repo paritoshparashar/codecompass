@@ -29,13 +29,18 @@ class ServiceType(Enum):
     LOCALIZATION = auto()
     CLASSIFICATION = auto()
 
+
 class ServiceCreater:
     def __init__(self):
-        pass
+        self.clone_root_folder = Path("github_clone_directory")
+        self.issue_root_folder = Path("issues_directory")
+        self.clone_root_folder.mkdir(parents=True, exist_ok=True)
+        self.issue_root_folder.mkdir(parents=True, exist_ok=True)
 
     def create_initialization_service(self) -> RepositoryInitializationService:
         service = RepositoryInitializationService(
-            Path(__file__).parents[3] / "clonedRepository"
+            clone_root_folder=self.clone_root_folder,
+            issue_root_folder=self.issue_root_folder,
         )
         return service
 
@@ -51,19 +56,25 @@ class ServiceCreater:
 
         match config.strategy:
             case LocalizationStrategyType.BM25:
-                scorer = BM25Scorer(
-                    k1=config.bm25_k1, b=config.bm25_b
-                )
+                scorer = BM25Scorer(k1=config.bm25_k1, b=config.bm25_b)
                 strategy = BM25LocalizationStrategy(scorer=scorer)
             case _:
                 raise ValueError(f"Unsupported strategy: {config.strategy}")
 
-        service = LocalizationService(strategy=strategy, loc_level=config.level, top_k=config.top_k)
+        service = LocalizationService(
+            strategy=strategy, loc_level=config.level, top_k=config.top_k
+        )
         return service
 
     def create_classification_service(self) -> ClassificationService:
         # For now, we can hardcode the strategy. In a real-world scenario, this could be configurable.
         config = ClassificationConfig(
-                    strategyType=ClassificationStrategyType.BM25Regression,
-                )
+            strategyType=ClassificationStrategyType.BM25Regression,
+        )
         return ClassificationService(config=config)
+
+    def get_clone_root_folder(self) -> Path:
+        return self.clone_root_folder
+
+    def get_issue_root_folder(self) -> Path:
+        return self.issue_root_folder

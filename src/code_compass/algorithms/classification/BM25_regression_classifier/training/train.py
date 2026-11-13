@@ -83,7 +83,7 @@ print(
 MODEL_DIR = Path(__file__).parent / "models"
 MODEL_DIR.mkdir(parents=True, exist_ok=True)
 
-MODEL_FILE = MODEL_DIR / "github_issue_classifier.pkl"
+MODEL_FILE = MODEL_DIR / "github_issue_classifier_BM25LogRes.pkl"
 joblib.dump(
     model,
     MODEL_FILE

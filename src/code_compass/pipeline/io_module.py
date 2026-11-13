@@ -10,11 +10,12 @@ __all__ = [
 ]
 
 from enum import Enum, auto
+from pathlib import Path
 
 from pydantic.v1 import BaseModel
 
 from ..domain.candidate_package.candidate_interface import Candidate
-from ..domain.issue import IssueType
+from ..domain.issue import Issue, IssueType
 
 
 class ResponseStatus(Enum):
@@ -30,19 +31,28 @@ class InitializeRepositoryRequest(BaseModel):
 
 class InitializeRepositoryResponse(BaseModel):
     status: ResponseStatus
-    repository_id: int | None
+    repository_id: int = 0
+    repository_name: str = ""
+    issue_folder: Path = Path("")
 
+# I/O Objects for the Issue Creation Endpoint
+class CreateIssueRequest(BaseModel):
+    repository_id: int
+    file_path: Path
+
+class CreateIssueResponse(BaseModel):
+    status: ResponseStatus
+    issue_id: int = 0
 
 # I/O Objects for the Issue Localization Endpoint
 class IssueLocalizationRequest(BaseModel):
     repository_id: int
-    issue: str
+    issue_id: int
 
 
 class IssueLocalizationResponse(BaseModel):
     status: ResponseStatus
-    localized_candidates: list[Candidate] | None
-    issue_id: int | None
+    localized_candidates: list[Candidate] = []
 
     class Config:
         arbitrary_types_allowed = True  # Required in Pydantic v1 for Candidate objects
@@ -57,4 +67,4 @@ class IssueClassificationRequest(BaseModel):
 
 class IssueClassificationResponse(BaseModel):
     status: ResponseStatus
-    classification_result: IssueType | None
+    classification_result: IssueType = IssueType.ABSTENTION

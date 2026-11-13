@@ -32,7 +32,7 @@ class ClassificationService(Service):
     def logConfig(self):
         # use __repr__() of the Config object to log the config details (TODO)
         Logger.log(f"{self.serviceName} Service Configuration:")
-        Logger.log(f"  Strategy Type: {self.config.strategyType}")
+        Logger.log(f"    Strategy Type: {self.config.strategyType}")
         Logger.log("\n")
 
     def classify_issue(self, issue: Issue) -> IssueType | None:
@@ -44,6 +44,7 @@ class ClassificationService(Service):
             Logger.log_service_end(self.serviceName, withError=True)
             return None
 
-        self.strategy.classify(issue)
-        Logger.log(f"Issue classified as: {issue.label}")
+        predictedLabel: IssueType = self.strategy.classify(issue)
+        Logger.log(f"Issue classified as: {predictedLabel.name}")
         Logger.log_service_end(self.serviceName, withError=False)
+        return predictedLabel

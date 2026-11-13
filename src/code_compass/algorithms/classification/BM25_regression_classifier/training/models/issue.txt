@@ -1,0 +1,49 @@
+Describe the bug and give evidence about its user-facing impact
+If passing multi-class data to a classifier where some class has only observations with zero weights, estimators will produce odd solutions which do not really make sense.
+
+For example:
+
+import numpy as np
+rng = np.random.default_rng(seed=123)
+X = rng.random(size=(30, 3))
+y = rng.integers(3, size=X.shape[0])
+w = rng.standard_gamma(1, size=X.shape[0])
+w[y == 1] = 0.
+
+from sklearn.linear_model import LogisticRegression
+LogisticRegression().fit(X, y, w).coef_
+array([[-0.01295201,  0.04689646, -0.19975591],
+       [ 0.0006037 ,  0.00044906,  0.00039081],
+       [ 0.01234832, -0.04734552,  0.19936509]])
+Mathematically, the correct solution would be something with a minus infinite as intercept and zeros in all coefficients, and the same applies to other classifiers with intercepts (e.g. gradient boosters), but I don't think this would be a desirable solution.
+
+Technically, the sample weights according to the documentation should be interpreted as if each observation would be repeated the amount of times given by the weights, and if we take that as zero, that means leaving them out, in which case the classes with zero weights would be removed during the pre-processing and would not be available under model.classes_.
+
+But that sort of behavior would be quite problematic for other libraries that aim at providing scikit-learn-compatible interfaces - for example, it'd contradict the docs that instruct developers to call np.unique to get the classes (link), and if implemented in such a way that validate_data could return something with different shape than the input, it might require other scikit-learn-compatible libraries to have a hard dependency on scikit-learn, and would likely break many things if the shapes differ.
+
+Thus, I think the most reasonable behavior here would be to error out with an informative message.
+
+For reference, this is what GLMNET would do, and would even have a non-zero threshold for it which is perhaps a more reasonable way of handling it:
+
+library(glmnet)
+data("iris")
+x <- iris[, -5]
+y <- iris$Species
+w <- rep(1, length(y))
+w[y == "virginica"] <- 0
+glmnet(x, y, weights=w, family="multinomial")
+Error: from glmnet C++ code (error code 8003); Null probability for class 3 < 1.0e-5
+Steps/Code to Reproduce
+Reproducer given above.
+
+Expected Results
+In order of preference, should either:
+
+Error out; or
+Filter out the classes; or
+Produce a mathematically correct solution.
+Actual Results
+Produces an incorrect solution.
+
+Versions
+Not relevant.

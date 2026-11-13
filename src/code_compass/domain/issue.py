@@ -21,6 +21,7 @@ class IssueType(Enum):
     PERFORMANCE = auto()
     TEST_GAP = auto()
     UNKNOWN = auto()
+    ABSTENTION = auto()  # Represents a decision to abstain from classifying the issue
 
 
 class Issue:
@@ -55,3 +56,7 @@ class Issue:
     def add_localized_candidates(self, candidates: list[Candidate]):
         """Add multiple localized candidates to the issue."""
         self.localized_candidates.extend(candidates)
+
+    def get_id(self) -> int:
+        """Get the ID of the issue."""
+        return self.issue_id

@@ -10,8 +10,9 @@ __all__ = ["RepositoryInitializationService"]
 
 
 class RepositoryInitializationService(Service):
-    def __init__(self, root_folder: Path) -> None:
-        self._root_folder = root_folder
+    def __init__(self, clone_root_folder: Path, issue_root_folder: Path) -> None:
+        self._clone_root_folder = clone_root_folder
+        self._issue_root_folder = issue_root_folder
         self.serviveName = "Repository Initialization"
 
     def initialize_repository(self, git_url: str, branch: str) -> Repository | None:
@@ -24,19 +25,24 @@ class RepositoryInitializationService(Service):
 
         # create unique id to store the repository in the system
         repository_id = hash(git_url + branch) % (10**8)
-        destination = self._root_folder / str(repository_id)
+        repository_name = "/".join(git_url.split("github.com/")[1].split("/")[:2])  # extracting the repo name from the URL
+        destination = self._clone_root_folder / (repository_name)
 
-        destination.parent.mkdir(parents=True, exist_ok=True)
         # clone the repository using git
         if not self._clone_repository(git_url, branch, destination):
             Logger.log_service_end(self.serviveName, withError=True)
             return None
 
+        # Create the issue folder for the repository
+        issue_folder = self._issue_root_folder / f"{repository_name}/issues"
+        issue_folder.mkdir(parents=True, exist_ok=True)
+
         repository = Repository(
             id=repository_id,
-            name=git_url.split("/")[-1],  # extracting the repo name from the URL
+            name=repository_name,
             url=git_url,
             path=destination,
+            issue_folder=issue_folder
         )
 
         # Initialize the repo for the system

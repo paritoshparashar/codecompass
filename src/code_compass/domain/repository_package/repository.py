@@ -25,6 +25,7 @@ class Repository:
         NOT_INITIALIZED = auto()  # system is not initialized yet
         INITIALIZED = auto()  # system is ready to accept a new issue
         LOCALIZED = auto()  # system has localized the issue
+        CLASSIFIED = auto()  # system has classified the issue
 
     def __init__(
         self,
@@ -32,12 +33,14 @@ class Repository:
         name: str,
         url: str,
         path: Path,
+        issue_folder: Path,
         state: State = State.NOT_INITIALIZED,
     ):
         self._id: int = id
         self._name: str = name
         self._url: str = url
         self._path: Path = path
+        self._issue_folder: Path = issue_folder
         self._documents: list[
             Document
         ] = []  # Sequence of Document objects associated with this repository
@@ -64,6 +67,10 @@ class Repository:
     @property
     def path(self) -> Path:
         return self._path
+
+    @property
+    def issue_folder(self) -> Path:
+        return self._issue_folder
 
     # Methods to manage documents associated with the repository
 
